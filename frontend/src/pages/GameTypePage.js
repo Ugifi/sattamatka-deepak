@@ -1,6 +1,6 @@
 import React from 'react';
-import { GAME_TYPES } from '../data/gameData';
 import { GameIcon } from '../components/Icons';
+import { GAME_TYPES, DISAWAR_GAME_TYPES } from '../data/gameData';
 
 export default function GameTypePage({ game, onSelect }) {
 
@@ -32,6 +32,9 @@ export default function GameTypePage({ game, onSelect }) {
     ));
   };
 
+  // ✅ Disawar ke liye sirf 2 types, baaki sab ke liye sab types
+  const activeGameTypes = game?.game_category === 'disawar' ? DISAWAR_GAME_TYPES : GAME_TYPES;
+
   return (
     <div className="game-type-page screen" style={{ 
       background: 'linear-gradient(145deg, #063d35, #021f1b)', 
@@ -53,7 +56,7 @@ export default function GameTypePage({ game, onSelect }) {
       )}
 
       <div className="game-type-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', padding: '15px' }}>
-        {GAME_TYPES.map((gt, i) => (
+        {activeGameTypes.map((gt, i) => (
           <div
             key={gt.id}
             className="gt-cell anim-in"
