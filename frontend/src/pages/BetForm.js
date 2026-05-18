@@ -4,6 +4,9 @@ import { SINGLE_PANAS, DOUBLE_PANAS, TRIPLE_PANAS } from '../data/gameData';
 const DIGITS = [0,1,2,3,4,5,6,7,8,9];
 const JODIS = Array.from({length:100},(_,i)=>String(i).padStart(2,'0'));
 
+const ODD_NUMBERS  = [1, 3, 5, 7, 9];
+const EVEN_NUMBERS = [0, 2, 4, 6, 8];
+
 export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const [num, setNum] = useState('');
   const [num2, setNum2] = useState('');
@@ -11,10 +14,10 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const [amt, setAmt] = useState('');
   const [bets, setBets] = useState([]);
   const [oddEven, setOddEven] = useState('');
+  const [oddEvenNum, setOddEvenNum] = useState(null); // ✅ NEW: selected number
   const [openClose, setOpenClose] = useState('open');
   const [cycleDigit, setCycleDigit] = useState(null);
 
-  // ✅ FIX: submitting state — button disable ho jaata hai, double click se multiple bids nahi jaati
   const [submitting, setSubmitting] = useState(false);
 
   const chips = [10, 50, 100, 200, 500];
@@ -60,21 +63,20 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const removeBet = i => setBets(b => b.filter((_, idx) => idx !== i));
   const totalAmt = bets.reduce((a, b) => a + b.amt, 0);
 
-// ✅ FIX: handleSubmit async + submitting flag (with Session Fix)
   const handleSubmit = async () => {
-    if (submitting) return; // double click block
+    if (submitting) return;
     setSubmitting(true);
 
     try {
-      // 👇 NAYA ADD KIYA: Session yahan se uthega
       const commonData = { session: openClose };
 
       if (isBulkType) {
         if (!bets.length) { setSubmitting(false); return; }
         await onSubmit({ numbers: bets, totalAmt, ...commonData });
       } else if (id === 'odd_even') {
-        if (!oddEven || !amt || Number(amt) < 10) { setSubmitting(false); return; }
-        await onSubmit({ number: oddEven, amount: Number(amt), ...commonData });
+        // ✅ FIX: oddEvenNum se actual number bhejo, oddEven type se ODD/EVEN bhejo
+        if (!oddEven || oddEvenNum === null || !amt || Number(amt) < 10) { setSubmitting(false); return; }
+        await onSubmit({ number: String(oddEvenNum), amount: Number(amt), ...commonData });
       } else if (id === 'half_sangam_a') {
         if (!num || !num2 || !amt || Number(amt) < 10) { setSubmitting(false); return; }
         await onSubmit({ number: `${num}-${num2}`, amount: Number(amt), ...commonData });
@@ -115,7 +117,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
     </div>
   );
 
-  // ✅ FIX: Button disabled + loading text jab submit ho raha ho
   const PlaceBtn = () => (
     <button
       className="btn-place"
@@ -151,7 +152,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
     </button>
   );
 
-  // ✅ FIX: PlaceAllBtn bhi disabled jab submitting
   const PlaceAllBtn = () => (
     <button
       className="btn-place"
@@ -175,23 +175,24 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
 
       <div className="bet-form-card">
         {/* ── Session Selection (Open/Close) ── */}
-{id !== 'jodi' && id !== 'jodi_bulk' && id !== 'jodi_digit' && (
-  <div className="fg">
-    <label className="fl">Select Session</label>
-    <div style={{display:'flex', gap:10, marginBottom:15}}>
-      {['open', 'close'].map(s => (
-        <div 
-          key={s} 
-          className={`chip${openClose === s ? ' active' : ''}`}
-          style={{flex:1, textAlign:'center', padding:'10px 0', cursor:'pointer'}}
-          onClick={() => setOpenClose(s)}
-        >
-          {s.toUpperCase()}
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+        {id !== 'jodi' && id !== 'jodi_bulk' && id !== 'jodi_digit' && (
+          <div className="fg">
+            <label className="fl">Select Session</label>
+            <div style={{display:'flex', gap:10, marginBottom:15}}>
+              {['open', 'close'].map(s => (
+                <div 
+                  key={s} 
+                  className={`chip${openClose === s ? ' active' : ''}`}
+                  style={{flex:1, textAlign:'center', padding:'10px 0', cursor:'pointer'}}
+                  onClick={() => setOpenClose(s)}
+                >
+                  {s.toUpperCase()}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="bf-title">🎯 {gameType.label}</div>
         <div className="infobox">{gameType.desc} — Win multiplier: <strong>{gameType.win}</strong></div>
 
@@ -398,18 +399,45 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
 
         {/* ── 13. ODD / EVEN ── */}
         {id === 'odd_even' && <>
+          {/* Step 1: ODD ya EVEN chunna */}
           <div className="fg"><label className="fl">Bet On</label>
-            <div style={{display:'flex',gap:10}}>
+            <div style={{display:'flex', gap:10}}>
               {['ODD','EVEN'].map(oe => (
                 <div key={oe} className={`chip${oddEven === oe ? ' active' : ''}`}
-                  style={{flex:1,textAlign:'center',padding:'12px 0',fontSize:14}}
-                  onClick={() => setOddEven(oe)}>{oe}
+                  style={{flex:1, textAlign:'center', padding:'12px 0', fontSize:14}}
+                  onClick={() => { setOddEven(oe); setOddEvenNum(null); }}
+                >
+                  {oe}
                 </div>
               ))}
             </div>
           </div>
+
+          {/* Step 2: ODD/EVEN ke numbers dikhao */}
+          {oddEven !== '' && (
+            <div className="fg">
+              <label className="fl">
+                {oddEven === 'ODD' ? 'ODD Numbers (1,3,5,7,9)' : 'EVEN Numbers (0,2,4,6,8)'}
+              </label>
+              <div className="num-grid">
+                {(oddEven === 'ODD' ? ODD_NUMBERS : EVEN_NUMBERS).map(n => (
+                  <div
+                    key={n}
+                    className={`nchip${oddEvenNum === n ? ' active' : ''}`}
+                    onClick={() => setOddEvenNum(n)}
+                  >
+                    {n}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <AmtInput/>
-          <WinInfo/>
+          <div className="infobox">
+            You bet: <strong>₹{Number(amt||0).toLocaleString()}</strong> &nbsp;|&nbsp;
+            Potential win: <strong>₹{(Number(amt||0)*2).toLocaleString()}</strong>
+          </div>
           <PlaceBtn/>
         </>}
 
@@ -463,14 +491,53 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         </>}
 
         {/* ── 18. SP DP TP ── */}
-        {id === 'sp_dp_tp' && <>
-          <div className="fg"><label className="fl">Enter Pana Number</label>
-            <input className="fi" type="text" placeholder="e.g. 128" maxLength={3} value={num} onChange={e => setNum(e.target.value)}/>
-          </div>
-          <AmtInput/>
-          <WinInfo/>
-          <PlaceBtn/>
-        </>}
+{id === 'sp_dp_tp' && <>
+  {/* SP / DP / TP Type Select */}
+  <div className="fg"><label className="fl">Select Type</label>
+    <div style={{display:'flex', gap:8, marginBottom:10}}>
+      {['SP','DP','TP'].map(t => (
+        <div key={t}
+          className={`chip${num2 === t ? ' active' : ''}`}
+          style={{flex:1, textAlign:'center', padding:'10px 0', fontSize:14, cursor:'pointer'}}
+          onClick={() => { setNum2(t); setNum(''); }}
+        >{t}</div>
+      ))}
+    </div>
+  </div>
+
+  {/* Pana Grid - type ke hisaab se */}
+  {num2 === 'SP' && (
+    <div className="fg"><label className="fl">Pick Single Pana</label>
+      <div className="pana-grid">
+        {SINGLE_PANAS.map(p => (
+          <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
+        ))}
+      </div>
+    </div>
+  )}
+  {num2 === 'DP' && (
+    <div className="fg"><label className="fl">Pick Double Pana</label>
+      <div className="pana-grid">
+        {DOUBLE_PANAS.map(p => (
+          <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
+        ))}
+      </div>
+    </div>
+  )}
+  {num2 === 'TP' && (
+    <div className="fg"><label className="fl">Pick Triple Pana</label>
+      <div className="pana-grid">
+        {TRIPLE_PANAS.map(p => (
+          <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <AmtInput/>
+  <WinInfo/>
+  <PlaceBtn/>
+</>}
 
         {/* ── 19. TWO DIGIT PANA ── */}
         {id === 'two_digit_pana' && <>
