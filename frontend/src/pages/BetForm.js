@@ -7,6 +7,9 @@ const JODIS = Array.from({length:100},(_,i)=>String(i).padStart(2,'0'));
 const ODD_NUMBERS  = [1, 3, 5, 7, 9];
 const EVEN_NUMBERS = [0, 2, 4, 6, 8];
 
+// ✅ 210 Numbers Array for Half & Full Sangam
+const PANA_210 = ['128', '137', '146', '236', '245', '290', '380', '470', '489', '560', '579', '678', '100', '119', '155', '227', '335', '344', '399', '588', '669', '129', '138', '147', '156', '237', '246', '345', '390', '480', '570', '589', '679', '110', '200', '228', '255', '336', '499', '660', '688', '778', '120', '139', '148', '157', '238', '247', '256', '346', '490', '580', '670', '689', '166', '229', '300', '337', '355', '445', '599', '779', '887', '130', '149', '158', '167', '239', '248', '257', '347', '356', '590', '680', '789', '112', '220', '266', '338', '400', '446', '455', '699', '770', '140', '159', '168', '230', '249', '258', '267', '348', '357', '456', '690', '780', '113', '122', '177', '339', '366', '447', '500', '799', '889', '123', '150', '169', '178', '240', '259', '268', '349', '358', '367', '457', '790', '114', '277', '330', '448', '466', '556', '600', '880', '899', '124', '160', '179', '250', '269', '278', '340', '359', '368', '458', '467', '890', '115', '133', '188', '223', '377', '449', '557', '566', '700', '125', '134', '170', '189', '260', '279', '350', '369', '378', '459', '468', '567', '116', '224', '233', '288', '440', '477', '558', '800', '990', '126', '135', '180', '234', '270', '289', '360', '379', '450', '469', '478', '568', '117', '144', '199', '225', '388', '559', '577', '667', '900', '127', '136', '145', '190', '235', '280', '370', '389', '460', '479', '569', '578', '118', '226', '244', '299', '334', '488', '550', '668', '776'];
+
 export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const [num, setNum] = useState('');
   const [num2, setNum2] = useState('');
@@ -14,7 +17,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const [amt, setAmt] = useState('');
   const [bets, setBets] = useState([]);
   const [oddEven, setOddEven] = useState('');
-  const [oddEvenNum, setOddEvenNum] = useState(null); // ✅ NEW: selected number
+  const [oddEvenNum, setOddEvenNum] = useState(null); 
   const [openClose, setOpenClose] = useState('open');
   const [cycleDigit, setCycleDigit] = useState(null);
 
@@ -43,7 +46,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   };
   const digitJodis = getDigitJodis(activeN, openClose);
 
-  const isBulkType = nt==='ank_bulk'||nt==='jodi_bulk'||nt==='pana_bulk'||id==='sp_common'||id==='dp_common'||id==='cycle_jodi'||id==='digit_jodi';
+  const isBulkType = nt==='ank_bulk'||nt==='jodi_bulk'||nt==='pana_bulk'||id==='sp_common'||id==='dp_common'||id==='cycle_jodi'||id==='digit_jodi'||id.includes('half_sangam')||id.includes('full_sangam');
 
   const addToBulk = () => {
     if (id === 'cycle_jodi') {
@@ -54,12 +57,17 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
       if (!amt || Number(amt) < 10 || activeN === null) return;
       setBets(b => [...b, ...digitJodis.map(j => ({ num: j, amt: Number(amt) }))]);
       setActiveN(null); setAmt('');
+    } else if (id.includes('half_sangam') || id.includes('full_sangam')) {
+      if (!num || !num2 || !amt || Number(amt) < 10) return;
+      setBets(b => [...b, { num: `${num}-${num2}`, amt: Number(amt) }]);
+      setNum(''); setNum2(''); setAmt('');
     } else {
       if (!num || !amt || Number(amt) < 10) return;
       setBets(b => [...b, { num, amt: Number(amt) }]);
       setNum(''); setActiveN(null); setAmt('');
     }
   };
+
   const removeBet = i => setBets(b => b.filter((_, idx) => idx !== i));
   const totalAmt = bets.reduce((a, b) => a + b.amt, 0);
 
@@ -74,18 +82,8 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         if (!bets.length) { setSubmitting(false); return; }
         await onSubmit({ numbers: bets, totalAmt, ...commonData });
       } else if (id === 'odd_even') {
-        // ✅ FIX: oddEvenNum se actual number bhejo, oddEven type se ODD/EVEN bhejo
         if (!oddEven || oddEvenNum === null || !amt || Number(amt) < 10) { setSubmitting(false); return; }
         await onSubmit({ number: String(oddEvenNum), amount: Number(amt), ...commonData });
-      } else if (id === 'half_sangam_a') {
-        if (!num || !num2 || !amt || Number(amt) < 10) { setSubmitting(false); return; }
-        await onSubmit({ number: `${num}-${num2}`, amount: Number(amt), ...commonData });
-      } else if (id === 'half_sangam_b') {
-        if (!num || !num2 || !amt || Number(amt) < 10) { setSubmitting(false); return; }
-        await onSubmit({ number: `${num}-${num2}`, amount: Number(amt), ...commonData });
-      } else if (id === 'full_sangam') {
-        if (!num || !num2 || !amt || Number(amt) < 10) { setSubmitting(false); return; }
-        await onSubmit({ number: `${num}-${num2}`, amount: Number(amt), ...commonData });
       } else if (id === 'two_digit_pana') {
         if (!num || !num2 || !amt || Number(amt) < 10) { setSubmitting(false); return; }
         await onSubmit({ number: `${num}|${num2}`, amount: Number(amt), ...commonData });
@@ -184,7 +182,14 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
                   key={s} 
                   className={`chip${openClose === s ? ' active' : ''}`}
                   style={{flex:1, textAlign:'center', padding:'10px 0', cursor:'pointer'}}
-                  onClick={() => setOpenClose(s)}
+                  onClick={() => { 
+                    setOpenClose(s); 
+                    // ✅ FIX: Sangam games mein tab change hone par number clear na ho
+                    if (!id.includes('sangam')) {
+                      setNum(''); 
+                      setNum2(''); 
+                    }
+                  }}
                 >
                   {s.toUpperCase()}
                 </div>
@@ -334,72 +339,94 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
           <PlaceBtn/>
         </>}
 
-        {/* ── 10. HALF SANGAM A ── */}
-        {id === 'half_sangam_a' && <>
-          <div className="fg"><label className="fl">Open Digit (0–9)</label>
-            <div className="num-grid">
-              {DIGITS.map(d => (
-                <div key={d} className={`nchip${num === String(d) ? ' active' : ''}`} onClick={() => setNum(String(d))}>{d}</div>
-              ))}
-            </div>
-          </div>
-          <div className="fg"><label className="fl">Close Pana</label>
-            <div className="pana-grid">
-              {SINGLE_PANAS.map(p => (
-                <div key={p} className={`pchip${num2 === p ? ' active' : ''}`} onClick={() => setNum2(p)}>{p}</div>
-              ))}
-            </div>
-          </div>
+        {/* ── 10/11. UNIFIED HALF SANGAM (BULK) ── */}
+        {(id === 'half_sangam_a' || id === 'half_sangam_b' || id === 'half_sangam_bulk') && <>
+          {openClose === 'open' ? (
+            // OPEN SELECTED: Open Digit + Close Pana
+            <>
+              <div className="fg"><label className="fl">Open Digit (0–9)</label>
+                <div className="num-grid">
+                  {DIGITS.map(d => (
+                    <div key={d} className={`nchip${num === String(d) ? ' active' : ''}`} onClick={() => setNum(String(d))}>{d}</div>
+                  ))}
+                </div>
+              </div>
+              <div className="fg"><label className="fl">Close Pana</label>
+                <div className="pana-grid">
+                  {PANA_210.map(p => (
+                    <div key={p} className={`pchip${num2 === p ? ' active' : ''}`} onClick={() => setNum2(p)}>{p}</div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            // CLOSE SELECTED: Open Pana + Close Digit
+            <>
+              <div className="fg"><label className="fl">Open Pana</label>
+                <div className="pana-grid">
+                  {PANA_210.map(p => (
+                    <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
+                  ))}
+                </div>
+              </div>
+              <div className="fg"><label className="fl">Close Digit (0–9)</label>
+                <div className="num-grid">
+                  {DIGITS.map(d => (
+                    <div key={d} className={`nchip${num2 === String(d) ? ' active' : ''}`} onClick={() => setNum2(String(d))}>{d}</div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
           <AmtInput/>
-          <WinInfo/>
-          <PlaceBtn/>
+          <AddBtn label="+ Add Half Sangam"/>
+          <BulkTable/>
+          {bets.length > 0 && <PlaceAllBtn/>}
         </>}
 
-        {/* ── 11. HALF SANGAM B ── */}
-        {id === 'half_sangam_b' && <>
-          <div className="fg"><label className="fl">Open Pana</label>
-            <div className="pana-grid">
-              {SINGLE_PANAS.map(p => (
-                <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
-              ))}
+        {/* ── 12. FULL SANGAM (SPLIT BY TAB) ── */}
+        {(id === 'full_sangam' || id === 'full_sangam_bulk') && <>
+          {openClose === 'open' ? (
+            <div className="fg">
+              <label className="fl" style={{display:'flex', justifyContent:'space-between', width:'100%'}}>
+                <span>Open Pana</span>
+                {num2 && <span style={{fontSize:12, color:'#4caf50', fontWeight:'bold'}}>Close Selected: {num2} ✓</span>}
+              </label>
+              <div className="pana-grid">
+                {PANA_210.map(p => (
+                  <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="fg"><label className="fl">Close Digit (0–9)</label>
-            <div className="num-grid">
-              {DIGITS.map(d => (
-                <div key={d} className={`nchip${num2 === String(d) ? ' active' : ''}`} onClick={() => setNum2(String(d))}>{d}</div>
-              ))}
+          ) : (
+            <div className="fg">
+              <label className="fl" style={{display:'flex', justifyContent:'space-between', width:'100%'}}>
+                <span>Close Pana</span>
+                {num && <span style={{fontSize:12, color:'#4caf50', fontWeight:'bold'}}>Open Selected: {num} ✓</span>}
+              </label>
+              <div className="pana-grid">
+                {PANA_210.map(p => (
+                  <div key={p} className={`pchip${num2 === p ? ' active' : ''}`} onClick={() => setNum2(p)}>{p}</div>
+                ))}
+              </div>
             </div>
-          </div>
-          <AmtInput/>
-          <WinInfo/>
-          <PlaceBtn/>
-        </>}
+          )}
 
-        {/* ── 12. FULL SANGAM ── */}
-        {id === 'full_sangam' && <>
-          <div className="fg"><label className="fl">Open Pana</label>
-            <div className="pana-grid">
-              {SINGLE_PANAS.map(p => (
-                <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
-              ))}
+          {/* Warning Message if both are not selected */}
+          {(!num || !num2) && (
+            <div className="infobox" style={{background:'#fff3cd', color:'#856404', border:'1px solid #ffeeba'}}>
+               Please select both <strong>Open Pana</strong> and <strong>Close Pana</strong>.
             </div>
-          </div>
-          <div className="fg"><label className="fl">Close Pana</label>
-            <div className="pana-grid">
-              {SINGLE_PANAS.map(p => (
-                <div key={p} className={`pchip${num2 === p ? ' active' : ''}`} onClick={() => setNum2(p)}>{p}</div>
-              ))}
-            </div>
-          </div>
+          )}
+
           <AmtInput/>
-          <WinInfo/>
-          <PlaceBtn/>
+          <AddBtn label="+ Add Full Sangam"/>
+          <BulkTable/>
+          {bets.length > 0 && <PlaceAllBtn/>}
         </>}
 
         {/* ── 13. ODD / EVEN ── */}
         {id === 'odd_even' && <>
-          {/* Step 1: ODD ya EVEN chunna */}
           <div className="fg"><label className="fl">Bet On</label>
             <div style={{display:'flex', gap:10}}>
               {['ODD','EVEN'].map(oe => (
@@ -413,7 +440,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
             </div>
           </div>
 
-          {/* Step 2: ODD/EVEN ke numbers dikhao */}
           {oddEven !== '' && (
             <div className="fg">
               <label className="fl">
@@ -421,11 +447,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
               </label>
               <div className="num-grid">
                 {(oddEven === 'ODD' ? ODD_NUMBERS : EVEN_NUMBERS).map(n => (
-                  <div
-                    key={n}
-                    className={`nchip${oddEvenNum === n ? ' active' : ''}`}
-                    onClick={() => setOddEvenNum(n)}
-                  >
+                  <div key={n} className={`nchip${oddEvenNum === n ? ' active' : ''}`} onClick={() => setOddEvenNum(n)}>
                     {n}
                   </div>
                 ))}
@@ -434,10 +456,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
           )}
 
           <AmtInput/>
-          <div className="infobox">
-            You bet: <strong>₹{Number(amt||0).toLocaleString()}</strong> &nbsp;|&nbsp;
-            Potential win: <strong>₹{(Number(amt||0)*2).toLocaleString()}</strong>
-          </div>
+          <WinInfo/>
           <PlaceBtn/>
         </>}
 
@@ -491,53 +510,50 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         </>}
 
         {/* ── 18. SP DP TP ── */}
-{id === 'sp_dp_tp' && <>
-  {/* SP / DP / TP Type Select */}
-  <div className="fg"><label className="fl">Select Type</label>
-    <div style={{display:'flex', gap:8, marginBottom:10}}>
-      {['SP','DP','TP'].map(t => (
-        <div key={t}
-          className={`chip${num2 === t ? ' active' : ''}`}
-          style={{flex:1, textAlign:'center', padding:'10px 0', fontSize:14, cursor:'pointer'}}
-          onClick={() => { setNum2(t); setNum(''); }}
-        >{t}</div>
-      ))}
-    </div>
-  </div>
+        {id === 'sp_dp_tp' && <>
+          <div className="fg"><label className="fl">Select Type</label>
+            <div style={{display:'flex', gap:8, marginBottom:10}}>
+              {['SP','DP','TP'].map(t => (
+                <div key={t} className={`chip${num2 === t ? ' active' : ''}`}
+                  style={{flex:1, textAlign:'center', padding:'10px 0', fontSize:14, cursor:'pointer'}}
+                  onClick={() => { setNum2(t); setNum(''); }}
+                >{t}</div>
+              ))}
+            </div>
+          </div>
 
-  {/* Pana Grid - type ke hisaab se */}
-  {num2 === 'SP' && (
-    <div className="fg"><label className="fl">Pick Single Pana</label>
-      <div className="pana-grid">
-        {SINGLE_PANAS.map(p => (
-          <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
-        ))}
-      </div>
-    </div>
-  )}
-  {num2 === 'DP' && (
-    <div className="fg"><label className="fl">Pick Double Pana</label>
-      <div className="pana-grid">
-        {DOUBLE_PANAS.map(p => (
-          <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
-        ))}
-      </div>
-    </div>
-  )}
-  {num2 === 'TP' && (
-    <div className="fg"><label className="fl">Pick Triple Pana</label>
-      <div className="pana-grid">
-        {TRIPLE_PANAS.map(p => (
-          <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
-        ))}
-      </div>
-    </div>
-  )}
+          {num2 === 'SP' && (
+            <div className="fg"><label className="fl">Pick Single Pana</label>
+              <div className="pana-grid">
+                {SINGLE_PANAS.map(p => (
+                  <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
+                ))}
+              </div>
+            </div>
+          )}
+          {num2 === 'DP' && (
+            <div className="fg"><label className="fl">Pick Double Pana</label>
+              <div className="pana-grid">
+                {DOUBLE_PANAS.map(p => (
+                  <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
+                ))}
+              </div>
+            </div>
+          )}
+          {num2 === 'TP' && (
+            <div className="fg"><label className="fl">Pick Triple Pana</label>
+              <div className="pana-grid">
+                {TRIPLE_PANAS.map(p => (
+                  <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
+                ))}
+              </div>
+            </div>
+          )}
 
-  <AmtInput/>
-  <WinInfo/>
-  <PlaceBtn/>
-</>}
+          <AmtInput/>
+          <WinInfo/>
+          <PlaceBtn/>
+        </>}
 
         {/* ── 19. TWO DIGIT PANA ── */}
         {id === 'two_digit_pana' && <>
