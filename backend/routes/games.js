@@ -8,42 +8,134 @@ require('dotenv').config();
 // All game types with payout multipliers
 const GAME_TYPES = {
   'single_digit':      { name: 'Single Digit',       payout: 9,     min_digits: 1, max_digits: 1 },
-  'jodi':              { name: 'Jodi',                payout: 90,    min_digits: 2, max_digits: 2 },
-  'single_pana':       { name: 'Single Pana',         payout: 150,   min_digits: 3, max_digits: 3 },
-  'double_pana':       { name: 'Double Pana',         payout: 300,   min_digits: 3, max_digits: 3 },
-  'triple_pana':       { name: 'Triple Pana',         payout: 600,   min_digits: 3, max_digits: 3 },
-  'half_sangam_a':     { name: 'Half Sangam A',       payout: 1500,  min_digits: 4, max_digits: 4, valid_numbers: ['128', '137', '146', '236', '245', '290', '380', '470', '489', '560', '579', '678', '100', '119', '155', '227', '335', '344', '399', '588', '669', '129', '138', '147', '156', '237', '246', '345', '390', '480', '570', '589', '679', '110', '200', '228', '255', '336', '499', '660', '688', '778', '120', '139', '148', '157', '238', '247', '256', '346', '490', '580', '670', '689', '166', '229', '300', '337', '355', '445', '599', '779', '887', '130', '149', '158', '167', '239', '248', '257', '347', '356', '590', '680', '789', '112', '220', '266', '338', '400', '446', '455', '699', '770', '140', '159', '168', '230', '249', '258', '267', '348', '357', '456', '690', '780', '113', '122', '177', '339', '366', '447', '500', '799', '889', '123', '150', '169', '178', '240', '259', '268', '349', '358', '367', '457', '790', '114', '277', '330', '448', '466', '556', '600', '880', '899', '124', '160', '179', '250', '269', '278', '340', '359', '368', '458', '467', '890', '115', '133', '188', '223', '377', '449', '557', '566', '700', '125', '134', '170', '189', '260', '279', '350', '369', '378', '459', '468', '567', '116', '224', '233', '288', '440', '477', '558', '800', '990', '126', '135', '180', '234', '270', '289', '360', '379', '450', '469', '478', '568', '117', '144', '199', '225', '388', '559', '577', '667', '900', '127', '136', '145', '190', '235', '280', '370', '389', '460', '479', '569', '578', '118', '226', '244', '299', '334', '488', '550', '668', '776'] },
-  'half_sangam_b':     { name: 'Half Sangam B',       payout: 1500,  min_digits: 4, max_digits: 4, valid_numbers: ['128', '137', '146', '236', '245', '290', '380', '470', '489', '560', '579', '678', '100', '119', '155', '227', '335', '344', '399', '588', '669', '129', '138', '147', '156', '237', '246', '345', '390', '480', '570', '589', '679', '110', '200', '228', '255', '336', '499', '660', '688', '778', '120', '139', '148', '157', '238', '247', '256', '346', '490', '580', '670', '689', '166', '229', '300', '337', '355', '445', '599', '779', '887', '130', '149', '158', '167', '239', '248', '257', '347', '356', '590', '680', '789', '112', '220', '266', '338', '400', '446', '455', '699', '770', '140', '159', '168', '230', '249', '258', '267', '348', '357', '456', '690', '780', '113', '122', '177', '339', '366', '447', '500', '799', '889', '123', '150', '169', '178', '240', '259', '268', '349', '358', '367', '457', '790', '114', '277', '330', '448', '466', '556', '600', '880', '899', '124', '160', '179', '250', '269', '278', '340', '359', '368', '458', '467', '890', '115', '133', '188', '223', '377', '449', '557', '566', '700', '125', '134', '170', '189', '260', '279', '350', '369', '378', '459', '468', '567', '116', '224', '233', '288', '440', '477', '558', '800', '990', '126', '135', '180', '234', '270', '289', '360', '379', '450', '469', '478', '568', '117', '144', '199', '225', '388', '559', '577', '667', '900', '127', '136', '145', '190', '235', '280', '370', '389', '460', '479', '569', '578', '118', '226', '244', '299', '334', '488', '550', '668', '776'] },
-  'full_sangam':       { name: 'Full Sangam',         payout: 10000, min_digits: 6, max_digits: 6, valid_numbers: ['128', '137', '146', '236', '245', '290', '380', '470', '489', '560', '579', '678', '100', '119', '155', '227', '335', '344', '399', '588', '669', '129', '138', '147', '156', '237', '246', '345', '390', '480', '570', '589', '679', '110', '200', '228', '255', '336', '499', '660', '688', '778', '120', '139', '148', '157', '238', '247', '256', '346', '490', '580', '670', '689', '166', '229', '300', '337', '355', '445', '599', '779', '887', '130', '149', '158', '167', '239', '248', '257', '347', '356', '590', '680', '789', '112', '220', '266', '338', '400', '446', '455', '699', '770', '140', '159', '168', '230', '249', '258', '267', '348', '357', '456', '690', '780', '113', '122', '177', '339', '366', '447', '500', '799', '889', '123', '150', '169', '178', '240', '259', '268', '349', '358', '367', '457', '790', '114', '277', '330', '448', '466', '556', '600', '880', '899', '124', '160', '179', '250', '269', '278', '340', '359', '368', '458', '467', '890', '115', '133', '188', '223', '377', '449', '557', '566', '700', '125', '134', '170', '189', '260', '279', '350', '369', '378', '459', '468', '567', '116', '224', '233', '288', '440', '477', '558', '800', '990', '126', '135', '180', '234', '270', '289', '360', '379', '450', '469', '478', '568', '117', '144', '199', '225', '388', '559', '577', '667', '900', '127', '136', '145', '190', '235', '280', '370', '389', '460', '479', '569', '578', '118', '226', '244', '299', '334', '488', '550', '668', '776'] },
-  'sp_motor':          { name: 'SP Motor',            payout: 150,   min_digits: 3, max_digits: 3 },
-  'dp_motor':          { name: 'DP Motor',            payout: 300,   min_digits: 3, max_digits: 3 },
-  'tp_motor':          { name: 'TP Motor',            payout: 600,   min_digits: 3, max_digits: 3 },
-  'odd_even':          { name: 'Odd Even',            payout: 2,     min_digits: 1, max_digits: 1 },
-  'family_jodi':       { name: 'Family Jodi',         payout: 90,    min_digits: 2, max_digits: 2 },
-  'cycle_pana':        { name: 'Cycle Pana',          payout: 150,   min_digits: 3, max_digits: 3 },
-  'sp_dp_tp':          { name: 'SP DP TP',            payout: 150,   min_digits: 3, max_digits: 3 },
-  'red_bracket':       { name: 'Red Bracket',         payout: 9,     min_digits: 1, max_digits: 1 },
-  'common_digit':      { name: 'Common Digit',        payout: 9,     min_digits: 1, max_digits: 1 },
-  'choice_sangam':     { name: 'Choice Sangam',       payout: 10000, min_digits: 6, max_digits: 6 },
-  'open_close':        { name: 'Open/Close',          payout: 9,     min_digits: 1, max_digits: 1 },
-  'jackpot':           { name: 'Jackpot',             payout: 9000,  min_digits: 3, max_digits: 3 },
-  'panel_group':       { name: 'Panel Group',         payout: 150,   min_digits: 3, max_digits: 3 },
-  'gunule':            { name: 'Gunule',              payout: 9,     min_digits: 1, max_digits: 1 },
-  'jodi_digit':        { name: 'Jodi Digit',          payout: 90,    min_digits: 2, max_digits: 2 },
-  'single_digit_bulk': { name: 'Single Digit Bulk',   payout: 9,     min_digits: 1, max_digits: 1 },
-  'jodi_bulk':         { name: 'Jodi Bulk',           payout: 90,    min_digits: 2, max_digits: 2 },
-  'red_jodi':          { name: 'Red Jodi',            payout: 90,    min_digits: 2, max_digits: 2 },
-  'cycle_jodi':        { name: 'Cycle Jodi',          payout: 90,    min_digits: 2, max_digits: 2 },
-  'digit_jodi':        { name: 'Digit Jodi',          payout: 90,    min_digits: 2, max_digits: 2 },
-  'sp_common':         { name: 'SP Common',           payout: 150,   min_digits: 3, max_digits: 3 },
-  'dp_common':         { name: 'DP Common',           payout: 300,   min_digits: 3, max_digits: 3 },
-  'single_pana_bulk':  { name: 'Single Pana Bulk',    payout: 150,   min_digits: 3, max_digits: 3 },
-  'double_pana_bulk':  { name: 'Double Pana Bulk',    payout: 300,   min_digits: 3, max_digits: 3 },
-  'two_digit_pana':    { name: 'Two Digit Pana',      payout: 300,   min_digits: 3, max_digits: 3 }
+  'jodi':              { name: 'Jodi',               payout: 90,    min_digits: 2, max_digits: 2 },
+  'single_pana':       { name: 'Single Pana',        payout: 150,   min_digits: 3, max_digits: 3 },
+  'double_pana':       { name: 'Double Pana',        payout: 300,   min_digits: 3, max_digits: 3 },
+  'triple_pana':       { name: 'Triple Pana',        payout: 600,   min_digits: 3, max_digits: 3 },
+  'family_pana':       { name: 'Family Pana',        payout: 150,   min_digits: 3, max_digits: 3 },
+  'family_jodi':       { name: 'Family Jodi',        payout: 90,    min_digits: 2, max_digits: 2 },
+  'half_sangam_a':     { name: 'Half Sangam A',      payout: 1500,  min_digits: 4, max_digits: 4 },
+  'half_sangam_b':     { name: 'Half Sangam B',      payout: 1500,  min_digits: 4, max_digits: 4 },
+  'full_sangam':       { name: 'Full Sangam',        payout: 10000, min_digits: 6, max_digits: 6 },
+  'sp_motor':          { name: 'SP Motor',           payout: 150,   min_digits: 3, max_digits: 10 },
+  'dp_motor':          { name: 'DP Motor',           payout: 300,   min_digits: 3, max_digits: 3 },
+  'tp_motor':          { name: 'TP Motor',           payout: 600,   min_digits: 3, max_digits: 3 },
+  'odd_even':          { name: 'Odd Even',           payout: 2,     min_digits: 1, max_digits: 1 },
+  'family_jodi':       { name: 'Family Jodi',        payout: 90,    min_digits: 2, max_digits: 2 },
+  'cycle_pana':        { name: 'Cycle Pana',         payout: 150,   min_digits: 3, max_digits: 3 },
+  'sp_dp_tp':          { name: 'SP DP TP',           payout: 150,   min_digits: 3, max_digits: 3 },
+  'red_bracket':       { name: 'Red Bracket',        payout: 9,     min_digits: 1, max_digits: 1 },
+  'common_digit':      { name: 'Common Digit',       payout: 9,     min_digits: 1, max_digits: 1 },
+  'choice_sangam':     { name: 'Choice Sangam',      payout: 10000, min_digits: 6, max_digits: 6 },
+  'open_close':        { name: 'Open/Close',         payout: 9,     min_digits: 1, max_digits: 1 },
+  'jackpot':           { name: 'Jackpot',            payout: 9000,  min_digits: 3, max_digits: 3 },
+  'panel_group':       { name: 'Panel Group',        payout: 150,   min_digits: 3, max_digits: 3 },
+  'gunule':            { name: 'Gunule',             payout: 9,     min_digits: 1, max_digits: 1 },
+  'jodi_digit':        { name: 'Jodi Digit',         payout: 90,    min_digits: 2, max_digits: 2 },
+  'single_digit_bulk': { name: 'Single Digit Bulk',  payout: 9,     min_digits: 1, max_digits: 1 },
+  'jodi_bulk':         { name: 'Jodi Bulk',          payout: 90,    min_digits: 2, max_digits: 2 },
+  'red_jodi':          { name: 'Red Jodi',           payout: 90,    min_digits: 2, max_digits: 2 },
+  'cycle_jodi':        { name: 'Cycle Jodi',         payout: 90,    min_digits: 2, max_digits: 2 },
+  'digit_jodi':        { name: 'Digit Jodi',         payout: 90,    min_digits: 2, max_digits: 2 },
+  'sp_common':         { name: 'SP Common',          payout: 150,   min_digits: 3, max_digits: 3 },
+  'dp_common':         { name: 'DP Common',          payout: 300,   min_digits: 3, max_digits: 3 },
+  'single_pana_bulk':  { name: 'Single Pana Bulk',   payout: 150,   min_digits: 3, max_digits: 3 },
+  'double_pana_bulk':  { name: 'Double Pana Bulk',   payout: 300,   min_digits: 3, max_digits: 3 },
+  'two_digit_pana':    { name: 'Two Digit Pana',     payout: 300,   min_digits: 3, max_digits: 3 }
 };
 
-// ─── GET ALL GAMES (with optional category filter) ────────────────────────────
-// ?category=main | starline | disawar
+// ─── PANA FAMILIES DATA ────────────────────────────────────────────────────────
+const PANA_FAMILIES = {
+  "111":["111","116","166","666"],
+  "112":["112","117","126","167","266","667"],
+  "113":["113","118","136","168","366","668"],
+  "114":["114","119","146","169","466","669"],
+  "115":["110","115","156","160","566","660"],
+  "122":["122","127","177","226","267","677"],
+  "123":["123","128","137","178","236","268","367","678"],
+  "124":["124","129","147","179","246","269","467","679"],
+  "125":["120","125","157","170","256","260","567","670"],
+  "133":["133","138","188","336","368","688"],
+  "134":["134","139","148","189","346","369","468","689"],
+  "135":["130","135","158","180","356","360","568","680"],
+  "144":["144","149","199","446","469","699"],
+  "145":["140","145","159","190","456","460","569","690"],
+  "155":["100","150","155","556","560","600"],
+  "222":["222","227","277","777"],
+  "223":["223","228","237","278","377","778"],
+  "224":["224","229","247","279","477","779"],
+  "225":["220","225","257","270","577","770"],
+  "233":["233","238","288","337","378","788"],
+  "234":["234","239","248","289","347","379","478","789"],
+  "235":["230","235","258","280","357","370","578","780"],
+  "244":["244","249","299","447","479","799"],
+  "245":["240","245","259","290","457","470","579","790"],
+  "255":["200","250","255","557","570","700"],
+  "333":["333","338","388","888"],
+  "334":["334","339","348","389","488","889"],
+  "335":["330","335","358","380","588","880"],
+  "344":["344","349","399","448","489","899"],
+  "345":["340","345","359","390","458","480","589","890"],
+  "355":["300","350","355","558","580","800"],
+  "444":["444","449","499","999"],
+  "445":["440","445","459","490","599","990"],
+  "455":["400","450","455","559","590","900"],
+  "555":["000","500","550","555"]
+};
+
+// ─── JODI FAMILIES DATA ───────────────────────────────────────────────────────
+const JODI_FAMILIES = {
+  "12": ["12","17","21","26","62","67","71","76"],
+  "13": ["13","18","31","36","63","68","81","86"],
+  "14": ["14","19","41","46","64","69","91","96"],
+  "15": ["01","06","10","15","51","56","60","65"],
+  "23": ["23","28","32","37","73","78","82","87"],
+  "24": ["24","29","42","47","74","79","92","97"],
+  "25": ["02","07","20","25","52","57","70","75"],
+  "34": ["34","39","43","48","84","89","93","98"],
+  "35": ["03","08","30","35","53","58","80","85"],
+  "45": ["04","09","40","45","54","59","90","95"],
+  "half_red": ["05","16","27","38","49","50","61","72","83","94"],
+  "full_red":  ["00","11","22","33","44","55","66","77","88","99"]
+};
+
+// Kisi bhi jodi se uski family dhundho
+function getFamilyFromJodi(jodi) {
+  for (let family in JODI_FAMILIES) {
+    if (JODI_FAMILIES[family].includes(jodi)) return family;
+  }
+  return null;
+}
+
+// Family dhundho kisi bhi pana se
+function getFamilyFromPana(pana) {
+  for (let family in PANA_FAMILIES) {
+    if (PANA_FAMILIES[family].includes(pana)) return family;
+  }
+  return null;
+}
+
+// ─── SP MOTOR LOGIC HELPER ────────────────────────────────────────────────────
+function generateSPMotor(numberString) {
+  const digits = String(numberString).split('').map(Number);
+  const uniqueSortedDigits = [...new Set(digits)].sort((a, b) => a - b);
+  const spCombinations = [];
+  const n = uniqueSortedDigits.length;
+
+  if (n < 3) return [];
+
+  for (let i = 0; i < n - 2; i++) {
+    for (let j = i + 1; j < n - 1; j++) {
+      for (let k = j + 1; k < n; k++) {
+        spCombinations.push(`${uniqueSortedDigits[i]}${uniqueSortedDigits[j]}${uniqueSortedDigits[k]}`);
+      }
+    }
+  }
+  return spCombinations;
+}
+
+
+// ─── GET ALL GAMES ─────────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
     const category = req.query.category || null;
@@ -73,6 +165,7 @@ router.get('/', async (req, res) => {
   }
 });
 
+
 // ─── GET SINGLE GAME ──────────────────────────────────────────────────────────
 router.get('/:id', async (req, res) => {
   try {
@@ -87,6 +180,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+
 // ─── PLACE BID ────────────────────────────────────────────────────────────────
 router.post('/bid', authMiddleware, [
   body('game_id').isInt().withMessage('Valid game ID required'),
@@ -99,17 +193,56 @@ router.post('/bid', authMiddleware, [
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
   const { game_id, game_type, number, amount, session } = req.body;
-  const bidAmount = parseFloat(amount);
+  const bidAmountPerCombination = parseFloat(amount);
 
   if (!GAME_TYPES[game_type]) {
     return res.status(400).json({ success: false, message: 'Invalid game type: ' + game_type });
   }
 
+  // ─── COMBINATIONS & TOTAL AMOUNT DECIDE ───────────────────────────────────
+  let combinations = [number];
+  let totalBidAmount = bidAmountPerCombination;
+  let isMotor = false;
+  let isFamilyPana = false;
+
+  if (game_type === 'sp_motor') {
+    isMotor = true;
+    combinations = generateSPMotor(number);
+
+    if (combinations.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid SP Motor digits. Provide at least 3 unique digits.' });
+    }
+    totalBidAmount = bidAmountPerCombination * combinations.length;
+
+  } else if (game_type === 'family_pana') {
+    isFamilyPana = true;
+    const foundFamily = getFamilyFromPana(number);
+
+    if (!foundFamily) {
+      return res.status(400).json({ success: false, message: 'Yeh pana kisi family mein nahi mila: ' + number });
+    }
+
+    combinations = PANA_FAMILIES[foundFamily];
+    totalBidAmount = bidAmountPerCombination * combinations.length;
+
+  } else if (game_type === 'family_jodi') {
+    // Family Jodi logic
+    const foundFamily = getFamilyFromJodi(number);
+
+    if (!foundFamily) {
+      return res.status(400).json({ success: false, message: 'Yeh jodi kisi family mein nahi mili: ' + number });
+    }
+
+    combinations = JODI_FAMILIES[foundFamily];
+    totalBidAmount = bidAmountPerCombination * combinations.length;
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   const minBid = parseFloat(process.env.MIN_BID_AMOUNT || 10);
   const maxBid = parseFloat(process.env.MAX_BID_AMOUNT || 10000);
 
-  if (bidAmount < minBid) return res.status(400).json({ success: false, message: `Minimum bid ₹${minBid}` });
-  if (bidAmount > maxBid) return res.status(400).json({ success: false, message: `Maximum bid ₹${maxBid}` });
+  if (bidAmountPerCombination < minBid) return res.status(400).json({ success: false, message: `Minimum bid ₹${minBid}` });
+  if (bidAmountPerCombination > maxBid) return res.status(400).json({ success: false, message: `Maximum bid ₹${maxBid}` });
 
   const conn = await db.getConnection();
   try {
@@ -128,17 +261,6 @@ router.post('/bid', authMiddleware, [
       return res.status(400).json({ success: false, message: `Betting is ${game.status} for this game` });
     }
 
-    const gameMinBid = game.min_bid || minBid;
-    const gameMaxBid = game.max_bid || maxBid;
-    if (bidAmount < gameMinBid) {
-      await conn.rollback();
-      return res.status(400).json({ success: false, message: `Minimum bid for this game: ₹${gameMinBid}` });
-    }
-    if (bidAmount > gameMaxBid) {
-      await conn.rollback();
-      return res.status(400).json({ success: false, message: `Maximum bid for this game: ₹${gameMaxBid}` });
-    }
-
     const [users] = await conn.query(
       'SELECT wallet_balance, winning_balance FROM users WHERE id = ? FOR UPDATE',
       [req.user.id]
@@ -148,52 +270,64 @@ router.post('/bid', authMiddleware, [
     const winBal    = parseFloat(user.winning_balance);
     const totalBalance = walletBal + winBal;
 
-    if (totalBalance < bidAmount) {
+    if (totalBalance < totalBidAmount) {
       await conn.rollback();
       return res.status(400).json({
         success: false,
-        message: `Insufficient balance. Available: ₹${totalBalance.toFixed(2)}`
+        message: `Insufficient balance. Total required: ₹${totalBidAmount}, Available: ₹${totalBalance.toFixed(2)}`
       });
     }
 
-    // wallet_balance se pehle kaato, phir winning_balance se
-    let remainingDeduction = bidAmount;
-    let walletDeducted = 0;
-    let winDeducted = 0;
+    // Deduction logic (wallet pehle, winning baad me)
+    let remainingDeduction = totalBidAmount;
+    let totalWalletDeducted = 0;
+    let totalWinDeducted = 0;
 
     if (walletBal >= remainingDeduction) {
-      walletDeducted = remainingDeduction;
+      totalWalletDeducted = remainingDeduction;
       remainingDeduction = 0;
     } else {
-      walletDeducted = walletBal;
+      totalWalletDeducted = walletBal;
       remainingDeduction -= walletBal;
-      winDeducted = remainingDeduction;
+      totalWinDeducted = remainingDeduction;
     }
 
     await conn.query(
       'UPDATE users SET wallet_balance = wallet_balance - ?, winning_balance = winning_balance - ? WHERE id = ?',
-      [walletDeducted, winDeducted, req.user.id]
+      [totalWalletDeducted, totalWinDeducted, req.user.id]
     );
 
     const payout = GAME_TYPES[game_type].payout;
-    const potential_winning = bidAmount * payout;
+    const potential_winning_per_bid = bidAmountPerCombination * payout;
 
-    // game_category bhi store karo description mein taaki admin mein dikh sake
+    const walletDeductedPerBid = totalWalletDeducted / combinations.length;
+    const winDeductedPerBid    = totalWinDeducted / combinations.length;
+
     const categoryLabel = game.game_category === 'starline' ? '⭐ Starline' :
                           game.game_category === 'disawar'  ? '🎰 Disawar'  : '';
 
-    const [bidResult] = await conn.query(
-      `INSERT INTO bids (user_id, game_id, game_type, session, number, amount, potential_winning, wallet_deducted, winning_deducted, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', CONVERT_TZ(NOW(), '+00:00', '+05:30'))`,
-      [req.user.id, game_id, game_type, session, number, bidAmount, potential_winning, walletDeducted, winDeducted]
-    );
+    // Har combination ke liye bid DB mein insert karo
+    for (const combo of combinations) {
+      await conn.query(
+        `INSERT INTO bids (user_id, game_id, game_type, session, number, amount, potential_winning, wallet_deducted, winning_deducted, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', CONVERT_TZ(NOW(), '+00:00', '+05:30'))`,
+        [req.user.id, game_id, game_type, session, combo, bidAmountPerCombination, potential_winning_per_bid, walletDeductedPerBid, winDeductedPerBid]
+      );
+    }
+
+    // Transaction description
+    const description = isMotor
+        ? `Bid: ${categoryLabel} ${game.name} | SP Motor (${number}) | ${combinations.length} Pannas`
+        : isFamilyPana
+        ? `Bid: ${categoryLabel} ${game.name} | Family Pana (${number}) | ${combinations.length} Pannas`
+        : game_type === 'family_jodi'
+        ? `Bid: ${categoryLabel} ${game.name} | Family Jodi (${number}) | ${combinations.length} Jodis`
+        : `Bid: ${categoryLabel} ${game.name} | ${GAME_TYPES[game_type].name} | ${number}`;
 
     await conn.query(
       `INSERT INTO transactions (user_id, type, wallet_type, amount, description, reference_id, status)
        VALUES (?, 'debit', 'wallet', ?, ?, ?, 'completed')`,
-      [req.user.id, bidAmount,
-       `Bid: ${categoryLabel} ${game.name} | ${GAME_TYPES[game_type].name} | ${number}`,
-       bidResult.insertId]
+      [req.user.id, totalBidAmount, description, game_id]
     );
 
     await conn.commit();
@@ -205,11 +339,15 @@ router.post('/bid', authMiddleware, [
 
     res.status(201).json({
       success: true,
-      message: 'Bid placed successfully!',
-      bid_id: bidResult.insertId,
-      amount_deducted: bidAmount,
-      potential_winning,
-      payout_ratio: `${payout}x`,
+      message: isMotor
+        ? `SP Motor Placed! ${combinations.length} Pannas generated.`
+        : isFamilyPana
+        ? `Family Pana Placed! ${combinations.length} Pannas cover ho gayi.`
+        : game_type === 'family_jodi'
+        ? `Family Jodi Placed! ${combinations.length} Jodis cover ho gayi.`
+        : 'Bid placed successfully!',
+      combinations_generated: combinations,
+      total_amount_deducted: totalBidAmount,
       new_balance: {
         wallet_balance:  parseFloat(updatedUser[0].wallet_balance),
         winning_balance: parseFloat(updatedUser[0].winning_balance)
@@ -223,6 +361,7 @@ router.post('/bid', authMiddleware, [
     conn.release();
   }
 });
+
 
 // ─── MY BIDS ──────────────────────────────────────────────────────────────────
 router.get('/bids/my', authMiddleware, async (req, res) => {
@@ -262,6 +401,7 @@ router.get('/bids/my', authMiddleware, async (req, res) => {
   }
 });
 
+
 // ─── GAME RESULTS ─────────────────────────────────────────────────────────────
 router.get('/:id/results', async (req, res) => {
   try {
@@ -277,6 +417,7 @@ router.get('/:id/results', async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 // ─── PAST RESULTS ─────────────────────────────────────────────────────────────
 router.get('/results/history', async (req, res) => {
