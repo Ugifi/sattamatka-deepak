@@ -1197,13 +1197,40 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
 
         {/* ── SP/DP COMMON ── */}
         {(id === 'sp_common' || id === 'dp_common') && <>
-          <div className="fg"><label className="fl">Pick {id === 'sp_common' ? 'Single' : 'Double'} Pana</label>
-            <div className="pana-grid">
-              {(id === 'sp_common' ? SINGLE_PANAS : DOUBLE_PANAS).map(p => (
-                <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
+          {/* Step 1: Digit select */}
+          <div className="fg">
+            <label className="fl">🔢 Digit Select Karo (0–9)</label>
+            <div className="num-grid">
+              {DIGITS.map(d => (
+                <div
+                  key={d}
+                  className={`nchip${spDpDigit === d ? ' active' : ''}`}
+                  onClick={() => { setSpDpDigit(d); setNum(''); }}
+                >{d}</div>
               ))}
             </div>
           </div>
+
+          {/* Step 2: Filtered pana grid */}
+          {spDpDigit !== null && (
+            <div className="fg">
+              <label className="fl">
+                Pick {id === 'sp_common' ? 'Single' : 'Double'} Pana — Digit {spDpDigit} ({id === 'sp_common' ? SP_PANAS_FINAL[spDpDigit]?.length : DP_PANAS[spDpDigit]?.length} panas)
+              </label>
+              <div className="pana-grid">
+                {(id === 'sp_common' ? (SP_PANAS_FINAL[spDpDigit] || []) : (DP_PANAS[spDpDigit] || [])).map(p => (
+                  <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {spDpDigit === null && (
+            <div className="infobox" style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba' }}>
+              ⬆️ Pehle digit select karo
+            </div>
+          )}
+
           <AmtInput/>
           <AddBtn/>
           <BulkTable/>
