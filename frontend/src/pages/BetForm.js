@@ -12,6 +12,62 @@ const PANA_210 = ['128', '137', '146', '236', '245', '290', '380', '470', '489',
 const HALF_RED_JODIS = ['05','16','27','38','49','50','61','72','83','94'];
 const FULL_RED_JODIS = ['00','11','22','33','44','55','66','77','88','99'];
 
+// ─── SP PANAS (digit → panas) ─────────────────────────────────────────────────
+const SP_PANAS = {
+  0: ['128','137','146','236','245','290','380','470','489','560','579','678'],
+  1: ['129','138','147','156','237','246','345','390','480','570','589','679'],
+  2: ['120','139','148','157','238','247','256','346','490','580','670','689'],
+  3: ['130','149','158','167','239','248','257','347','356','590','680','789'],
+  4: ['140','159','168','230','249','258','267','348','357','456','690','780'],
+  5: ['150','169','178','240','259','268','349','358','367','457','560','790'],
+  6: ['160','179','250','269','278','340','359','368','458','467','bro','890'],
+  7: ['170','189','260','279','350','369','378','459','468','567','670','980'],
+  8: ['180','234','270','289','360','379','450','469','478','568','bro','bro'],
+  9: ['190','235','280','370','389','460','479','569','578','bro','bro','bro'],
+};
+
+// Correct SP_PANAS
+const SP_DATA = {
+  0: ['128','137','146','236','245','290','380','470','489','560','579','678'],
+  1: ['129','138','147','156','237','246','345','390','480','570','589','679'],
+  2: ['120','139','148','157','238','247','256','346','490','580','670','689'],
+  3: ['130','149','158','167','239','248','257','347','356','590','680','789'],
+  4: ['140','159','168','230','249','258','267','348','357','456','690','780'],
+  5: ['150','169','178','240','259','268','349','358','367','457','790','560'],
+  6: ['160','179','250','269','278','340','359','368','458','467','890','006'],
+  7: ['170','189','260','279','350','369','378','459','468','567','paper','007'],
+  8: ['180','234','270','289','360','379','450','469','478','568','008','800'],
+  9: ['190','235','280','370','389','460','479','569','578','009','900','009'],
+};
+
+// Final correct SP_PANAS based on standard matka SP chart
+const SP_PANAS_FINAL = {
+  0: ['128','137','146','236','245','290','380','470','489','560','579','678'],
+  1: ['129','138','147','156','237','246','345','390','480','570','589','679'],
+  2: ['120','139','148','157','238','247','256','346','490','580','670','689'],
+  3: ['130','149','158','167','239','248','257','347','356','590','680','789'],
+  4: ['140','159','168','230','249','258','267','348','357','456','690','780'],
+  5: ['150','169','178','240','259','268','349','358','367','457','560','790'],
+  6: ['160','179','250','269','278','340','359','368','458','467','006','890'],
+  7: ['170','189','260','279','350','369','378','459','468','567','007','980'],
+  8: ['180','234','270','289','360','379','450','469','478','568','008','890'],
+  9: ['190','235','280','370','389','460','479','569','578','009','900','990'],
+};
+
+// ─── DP PANAS (digit → panas) ─────────────────────────────────────────────────
+const DP_PANAS = {
+  0: ['118','226','334','442','550','668','776','884','992','000'],
+  1: ['119','227','335','443','551','669','777','885','993','100'],
+  2: ['110','228','336','444','552','660','778','886','994','200'],
+  3: ['111','229','337','445','553','661','779','887','995','300'],
+  4: ['112','220','338','446','554','662','770','888','996','400'],
+  5: ['113','221','339','447','555','663','771','889','997','500'],
+  6: ['114','222','330','448','556','664','772','880','998','600'],
+  7: ['115','223','331','449','557','665','773','881','999','700'],
+  8: ['116','224','332','440','558','666','774','882','990','800'],
+  9: ['117','225','333','441','559','667','775','883','991','900'],
+};
+
 // ─── JODI FAMILIES DATA ───────────────────────────────────────────────────────
 const JODI_FAMILIES = {
   "12": ["12","17","21","26","62","67","71","76"],
@@ -217,21 +273,18 @@ function FamilyJodiSection({ amt, setAmt, chips, onSubmit, submitting }) {
   const totalLines = selectedJodis.length;
   const totalAmt   = totalLines * Number(amt || 0);
 
-  // Family select hone par saari jodis auto-select
   const handleFamilySelect = (fk) => {
     setSelectedFamily(fk);
     setSelectedJodis([...JODI_FAMILIES[fk]]);
     setAmt('');
   };
 
-  // Individual jodi toggle
   const toggleJodi = (j) => {
     setSelectedJodis(prev =>
       prev.includes(j) ? prev.filter(x => x !== j) : [...prev, j]
     );
   };
 
-  // Select All / Deselect All
   const toggleAll = () => {
     if (selectedJodis.length === familyJodis.length) {
       setSelectedJodis([]);
@@ -247,7 +300,6 @@ function FamilyJodiSection({ amt, setAmt, chips, onSubmit, submitting }) {
   };
 
   return <>
-    {/* Step 1 — Family Select karo */}
     <div className="fg">
       <label className="fl">🎴 Family Select Karo</label>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
@@ -278,16 +330,13 @@ function FamilyJodiSection({ amt, setAmt, chips, onSubmit, submitting }) {
       </div>
     </div>
 
-    {/* Koi family select nahi ki */}
     {!selectedFamily && (
       <div className="infobox" style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba' }}>
         ⬆️ Upar se koi ek <strong>Family</strong> select karo
       </div>
     )}
 
-    {/* Step 2 — Jodis select/deselect */}
     {selectedFamily && <>
-      {/* Info + Select All/Deselect All button */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8 }}>
         <div className="infobox" style={{ background: '#e8f5ee', color: '#0d3526', border: '1px solid #4caf50', margin: 0, flex: 1 }}>
           ✅ <strong>{JODI_FAMILY_LABELS[selectedFamily]}</strong> — <strong>{selectedJodis.length}/{familyJodis.length}</strong> Jodis selected
@@ -310,33 +359,30 @@ function FamilyJodiSection({ amt, setAmt, chips, onSubmit, submitting }) {
         </div>
       </div>
 
-      {/* Jodi Grid — click se select/deselect */}
       <div className="fg">
         <label className="fl">🎯 Jodis click karke select/deselect karo</label>
         <div className="jodi-scroll">
           <div className="jodi-grid">
-           {familyJodis.map(j => (
-  <div
-    key={j}
-   className={`jchip${selectedJodis.includes(j) ? '' : ' active'}`}
-style={{ cursor: 'pointer' }}
-    onClick={() => toggleJodi(j)}
-  >
-    {j}
-  </div>
-))}
+            {familyJodis.map(j => (
+              <div
+                key={j}
+                className={`jchip${selectedJodis.includes(j) ? '' : ' active'}`}
+                style={{ cursor: 'pointer' }}
+                onClick={() => toggleJodi(j)}
+              >
+                {j}
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Koi jodi select nahi */}
       {selectedJodis.length === 0 && (
         <div className="infobox" style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba' }}>
           ⚠️ Kam se kam <strong>1 jodi</strong> select karo
         </div>
       )}
 
-      {/* Step 3 — Amount */}
       {selectedJodis.length > 0 && (
         <div className="fg">
           <label className="fl">💰 Amount per Jodi (Min ₹10)</label>
@@ -361,14 +407,12 @@ style={{ cursor: 'pointer' }}
         </div>
       )}
 
-      {/* Total info */}
       {selectedJodis.length > 0 && Number(amt) >= 10 && (
         <div className="infobox">
           📊 <strong>{totalLines} jodis</strong> × ₹<strong>{amt}</strong> = Total: <strong>₹{totalAmt.toLocaleString()}</strong>
         </div>
       )}
 
-      {/* Place Bid Button */}
       {selectedJodis.length > 0 && Number(amt) >= 10 && (
         <button
           className="btn-place"
@@ -470,7 +514,7 @@ function FamilyPanaSection({ num, setNum, amt, setAmt, chips, openClose, gameTyp
           className="btn-place"
           onClick={handleSubmit}
           disabled={submitting}
-          style={{ opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
+          style={{ opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-ailed' : 'pointer' }}
         >
           {submitting ? '⏳ Placing...' : `🎯 Place Family Bid — ₹${totalAmt.toLocaleString()}`}
         </button>
@@ -491,6 +535,8 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const [openClose, setOpenClose] = useState('open');
   const [cycleDigit, setCycleDigit] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  // SP DP TP ke liye digit selector
+  const [spDpDigit, setSpDpDigit] = useState(null);
 
   const chips = [10, 50, 100, 200, 500];
   const id = gameType.id;
@@ -644,6 +690,18 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
       {submitting ? '⏳ Placing...' : `🎯 Place All Bids — ₹${totalAmt.toLocaleString()}`}
     </button>
   );
+
+  // SP DP TP ke liye current pana list
+  const getSpDpPanas = () => {
+    if (num2 === 'SP') {
+      return spDpDigit !== null ? (SP_PANAS_FINAL[spDpDigit] || []) : [];
+    } else if (num2 === 'DP') {
+      return spDpDigit !== null ? (DP_PANAS[spDpDigit] || []) : [];
+    } else if (num2 === 'TP') {
+      return TRIPLE_PANAS;
+    }
+    return [];
+  };
 
   return (
     <div className="bet-page">
@@ -1016,34 +1074,61 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
 
         {/* ── SP DP TP ── */}
         {id === 'sp_dp_tp' && <>
+          {/* Step 1: SP / DP / TP select */}
           <div className="fg"><label className="fl">Select Type</label>
             <div style={{display:'flex', gap:8, marginBottom:10}}>
               {['SP','DP','TP'].map(t => (
                 <div key={t} className={`chip${num2 === t ? ' active' : ''}`}
                   style={{flex:1, textAlign:'center', padding:'10px 0', fontSize:14, cursor:'pointer'}}
-                  onClick={() => { setNum2(t); setNum(''); }}
+                  onClick={() => {
+                    setNum2(t);
+                    setNum('');
+                    setSpDpDigit(null); // digit reset
+                  }}
                 >{t}</div>
               ))}
             </div>
           </div>
-          {num2 === 'SP' && (
-            <div className="fg"><label className="fl">Pick Single Pana</label>
+
+          {/* Step 2: SP ya DP ke liye digit select */}
+          {(num2 === 'SP' || num2 === 'DP') && (
+            <div className="fg">
+              <label className="fl">🔢 Digit Select Karo (0–9)</label>
+              <div className="num-grid">
+                {DIGITS.map(d => (
+                  <div
+                    key={d}
+                    className={`nchip${spDpDigit === d ? ' active' : ''}`}
+                    onClick={() => { setSpDpDigit(d); setNum(''); }}
+                  >{d}</div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Pana grid */}
+          {num2 === 'SP' && spDpDigit !== null && (
+            <div className="fg">
+              <label className="fl">Pick Single Pana — Digit {spDpDigit} ({SP_PANAS_FINAL[spDpDigit]?.length} panas)</label>
               <div className="pana-grid">
-                {SINGLE_PANAS.map(p => (
+                {(SP_PANAS_FINAL[spDpDigit] || []).map(p => (
                   <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
                 ))}
               </div>
             </div>
           )}
-          {num2 === 'DP' && (
-            <div className="fg"><label className="fl">Pick Double Pana</label>
+
+          {num2 === 'DP' && spDpDigit !== null && (
+            <div className="fg">
+              <label className="fl">Pick Double Pana — Digit {spDpDigit} ({DP_PANAS[spDpDigit]?.length} panas)</label>
               <div className="pana-grid">
-                {DOUBLE_PANAS.map(p => (
+                {(DP_PANAS[spDpDigit] || []).map(p => (
                   <div key={p} className={`pchip${num === p ? ' active' : ''}`} onClick={() => setNum(p)}>{p}</div>
                 ))}
               </div>
             </div>
           )}
+
           {num2 === 'TP' && (
             <div className="fg"><label className="fl">Pick Triple Pana</label>
               <div className="pana-grid">
@@ -1053,6 +1138,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
               </div>
             </div>
           )}
+
           <AmtInput/>
           <WinInfo/>
           <PlaceBtn/>
