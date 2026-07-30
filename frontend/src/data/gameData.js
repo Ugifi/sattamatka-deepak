@@ -18,6 +18,7 @@ export const GAME_TYPES = [
   {id:'dp_motor',          label:'DP MOTOR',          icon:'dp_motor',       desc:'Double Pana motor bet',       win:'300×', numType:'pana_bulk'},
   {id:'sp_motor',          label:'SP MOTOR',          icon:'sp_motor',       desc:'Single Pana motor bet',       win:'150×', numType:'pana_bulk'},
   {id:'red_jodi',          label:'RED JODI',          icon:'red_jodi',       desc:'Special red jodi bet',        win:'90×',  numType:'jodi'},
+  {id:'cycle_panna', label:'CYCLE PANNA', icon:'cycle_jodi', desc:'Jodi select karo, panas dekho', win:'150×', numType:'pana_bulk'},
   {id:'cycle_jodi',        label:'CYCLE JODI',        icon:'cycle_jodi',     desc:'All jodis with a digit',      win:'90×',  numType:'jodi_bulk'},
   {id:'sp_dp_tp',          label:'SP DP TP',          icon:'sp_dp_tp',       desc:'SP/DP/TP combo',              win:'150×', numType:'pana'},
   {id:'two_digit_pana',    label:'TWO DIGIT PANA',    icon:'two_digit_pana', desc:'2-digit + pana combo',        win:'300×', numType:'sangam'},
