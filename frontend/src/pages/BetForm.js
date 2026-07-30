@@ -12,6 +12,66 @@ const PANA_210 = ['128', '137', '146', '236', '245', '290', '380', '470', '489',
 const HALF_RED_JODIS = ['05','16','27','38','49','50','61','72','83','94'];
 const FULL_RED_JODIS = ['00','11','22','33','44','55','66','77','88','99'];
 
+
+// ─── CYCLE PANNA DATA ─────────────────────────────────────────────────────────
+const CYCLE_PANNA_DATA = {
+  10: [100,110,120,130,140,150,160,170,180,190],
+  11: [110,111,112,113,114,115,116,117,118,119],
+  12: [112,120,122,123,124,125,126,127,128,129],
+  13: [113,123,130,133,134,135,136,137,138,139],
+  14: [114,124,134,140,144,145,146,147,148,149],
+  15: [115,125,135,145,150,155,156,157,158,159],
+  16: [116,126,136,146,156,160,166,167,168,169],
+  17: [117,127,137,147,157,167,170,177,178,179],
+  18: [118,128,138,148,158,168,178,180,188,189],
+  19: [119,129,139,149,159,169,179,189,190,199],
+  20: [120,200,220,230,240,250,260,270,280,290],
+  22: [122,220,222,223,224,225,226,227,228,229],
+  23: [123,223,230,233,234,235,236,237,238,239],
+  24: [124,224,234,240,244,245,246,247,248,249],
+  25: [125,225,235,245,250,255,256,257,258,259],
+  26: [126,226,236,246,256,260,266,267,268,269],
+  27: [127,227,237,247,257,267,270,277,278,279],
+  28: [128,228,238,248,258,268,278,280,288,289],
+  29: [129,229,239,249,259,269,279,289,290,299],
+  30: [130,230,300,330,340,350,360,370,380,390],
+  33: [133,233,333,334,335,336,337,338,339,330],
+  34: [134,234,334,340,344,345,346,347,348,349],
+  35: [135,235,335,345,350,355,356,357,358,359],
+  36: [136,236,336,346,356,360,366,367,368,369],
+  37: [137,237,337,347,357,367,370,377,378,379],
+  38: [138,238,338,348,358,368,378,380,388,389],
+  39: [139,239,339,349,359,369,379,389,390,399],
+  40: [140,240,340,400,440,450,460,470,480,490],
+  44: [144,244,344,440,444,445,446,447,448,449],
+  45: [145,245,345,445,450,455,456,457,458,459],
+  46: [146,246,346,446,456,460,466,467,468,469],
+  47: [147,247,347,447,457,467,470,477,478,479],
+  48: [148,248,348,448,458,468,478,480,488,489],
+  49: [149,249,349,449,459,469,479,489,490,499],
+  50: [150,250,350,450,500,550,560,570,580,590],
+  55: [155,255,355,455,550,555,556,557,558,559],
+  56: [156,256,356,456,556,560,566,567,568,569],
+  57: [157,257,357,457,557,567,570,577,578,579],
+  58: [158,258,358,458,558,568,578,580,588,589],
+  59: [159,259,359,459,559,569,579,589,590,599],
+  60: [160,260,360,460,560,600,660,670,680,690],
+  66: [166,266,366,466,566,660,666,667,668,669],
+  67: [167,267,367,467,567,667,670,677,678,679],
+  68: [168,268,368,468,568,668,678,680,688,689],
+  69: [169,269,369,469,569,669,679,689,690,699],
+  70: [170,270,370,470,570,670,700,770,780,790],
+  77: [177,277,377,477,577,677,770,777,778,779],
+  78: [178,278,378,478,578,678,778,780,788,789],
+  79: [179,279,379,479,579,679,779,789,790,799],
+  80: [180,280,380,480,580,680,780,800,880,890],
+  88: [188,288,388,488,588,688,788,880,888,889],
+  89: [189,289,389,489,589,689,789,889,890,899],
+  90: [190,290,390,490,590,690,790,890,900,990],
+  99: [199,299,399,499,599,699,799,899,990,999],
+};
+
+const CYCLE_PANNA_JODIS = Object.keys(CYCLE_PANNA_DATA).map(Number).sort((a,b)=>a-b);
 // ─── SP PANAS (digit → panas) ─────────────────────────────────────────────────
 const SP_PANAS = {
   0: ['128','137','146','236','245','290','380','470','489','560','579','678'],
@@ -561,8 +621,8 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   };
   const digitJodis = getDigitJodis(activeN, openClose);
 
-  const isBulkType = nt==='ank_bulk'||nt==='jodi_bulk'||nt==='pana_bulk'||id==='sp_common'||id==='dp_common'||id==='cycle_jodi'||id==='digit_jodi'||id.includes('half_sangam')||id.includes('full_sangam')||id==='family_jodi'||id==='family_pana';
-
+// ✅ SAHI
+const isBulkType = nt==='ank_bulk'||nt==='jodi_bulk'||nt==='pana_bulk'||id==='sp_common'||id==='dp_common'||id==='cycle_jodi'||id==='digit_jodi'||id==='cycle_panna'||id.includes('half_sangam')||id.includes('full_sangam')||id==='family_jodi'||id==='family_pana';
   const addToBulk = () => {
     if (id === 'cycle_jodi') {
       if (!amt || Number(amt) < 10) return;
@@ -1236,7 +1296,84 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
           <BulkTable/>
           {bets.length > 0 && <PlaceAllBtn/>}
         </>}
+{/* ── CYCLE PANNA ── */}
+{id === 'cycle_panna' && <>
+  <div className="fg">
+    <label className="fl">🎯 Jodi Select Karo</label>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+      {CYCLE_PANNA_JODIS.map(j => (
+        <div
+          key={j}
+          onClick={() => { setSpDpDigit(j); setNum(''); }}
+          style={{
+            padding: '10px 14px',
+            borderRadius: 10,
+            border: spDpDigit === j ? '2px solid #00ffd5' : '2px solid rgba(0,255,213,0.3)',
+            background: spDpDigit === j ? 'rgba(0,255,213,0.15)' : 'rgba(0,255,213,0.04)',
+            color: spDpDigit === j ? '#00ffd5' : '#aaa',
+            fontWeight: 900,
+            fontSize: 15,
+            cursor: 'pointer',
+            minWidth: 48,
+            textAlign: 'center',
+            transition: 'all 0.15s',
+            boxShadow: spDpDigit === j ? '0 0 10px rgba(0,255,213,0.4)' : 'none',
+          }}
+        >
+          {j}
+        </div>
+      ))}
+    </div>
+  </div>
 
+  {spDpDigit !== null && CYCLE_PANNA_DATA[spDpDigit] && <>
+    <div className="infobox" style={{ background: 'rgba(0,255,213,0.08)', color: '#00ffd5', border: '1px solid rgba(0,255,213,0.4)' }}>
+      🎯 <strong>Jodi {spDpDigit}</strong> — <strong>{CYCLE_PANNA_DATA[spDpDigit].length} Panas</strong> available
+    </div>
+
+    <div className="fg">
+      <label className="fl">📋 Cycle Panas ({CYCLE_PANNA_DATA[spDpDigit].length})</label>
+      <div className="pana-grid">
+        {CYCLE_PANNA_DATA[spDpDigit].map(p => (
+          <div
+            key={p}
+            className={`pchip${num === String(p) ? ' active' : ''}`}
+            onClick={() => setNum(String(p))}
+          >
+            {String(p).padStart(3,'0')}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <AmtInput label="💰 Amount per Pana (Min ₹10)" />
+
+    {num && Number(amt) >= 10 && (
+      <div className="infobox">
+        📊 Selected: <strong>{String(num).padStart(3,'0')}</strong> | Bid: <strong>₹{Number(amt).toLocaleString()}</strong>
+      </div>
+    )}
+
+    <AddBtn label="+ Add to List" />
+    <BulkTable />
+    {bets.length > 0 && (
+      <button
+        className="btn-place"
+        onClick={handleSubmit}
+        disabled={submitting}
+        style={{ marginTop: 12, opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
+      >
+        {submitting ? '⏳ Placing...' : `🎯 Place All — ₹${totalAmt.toLocaleString()}`}
+      </button>
+    )}
+  </>}
+
+  {spDpDigit === null && (
+    <div className="infobox" style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba' }}>
+      ⬆️ Pehle <strong>Jodi</strong> select karo
+    </div>
+  )}
+</>}
       </div>
     </div>
   );
