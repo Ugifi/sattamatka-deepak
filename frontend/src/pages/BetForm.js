@@ -622,7 +622,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const digitJodis = getDigitJodis(activeN, openClose);
 
 // ✅ SAHI
-const isBulkType = nt==='ank_bulk'||nt==='jodi_bulk'||nt==='pana_bulk'||id==='sp_common'||id==='dp_common'||id==='cycle_jodi'||id==='digit_jodi'||id==='cycle_panna'||id.includes('half_sangam')||id.includes('full_sangam')||id==='family_jodi'||id==='family_pana';
+const isBulkType = nt==='ank_bulk'||nt==='jodi_bulk'||nt==='pana_bulk'||id==='sp_common'||id==='dp_common'||id==='cycle_jodi'||id==='digit_jodi'||id==='cycle_panna'||id==='crossing_jodi'||id.includes('half_sangam')||id.includes('full_sangam')||id==='family_jodi'||id==='family_pana';
   const addToBulk = () => {
     if (id === 'cycle_jodi') {
       if (!amt || Number(amt) < 10) return;
@@ -1374,6 +1374,142 @@ const isBulkType = nt==='ank_bulk'||nt==='jodi_bulk'||nt==='pana_bulk'||id==='sp
     </div>
   )}
 </>}
+{/* ── CROSSING JODI ── */}
+{id === 'crossing_jodi' && (() => {
+  const f = [...new Set(num.split('').filter(c => /\d/.test(c)))];
+  const s = [...new Set(num2.split('').filter(c => /\d/.test(c)))];
+  const cutDouble = cycleDigit === 'cut';
+  const generated = [];
+  f.forEach(a => s.forEach(b => {
+    if (cutDouble && a === b) return;
+    generated.push(a + b);
+  }));
+  const totalGenAmt = generated.length * Number(amt || 0);
+
+  return <>
+    <div className="fg">
+      <label className="fl">🔢 First Digits (max 7)</label>
+      <input
+        className="fi"
+        type="text"
+        inputMode="numeric"
+        maxLength={7}
+        placeholder="e.g. 1234"
+        value={num}
+        onChange={e => setNum(e.target.value.replace(/\D/g,'').slice(0,7))}
+        style={{ letterSpacing: 6, fontSize: 22, fontWeight: 800, textAlign: 'center' }}
+      />
+    </div>
+
+    <div className="fg">
+      <label className="fl">🔢 Second Digits (max 7)</label>
+      <input
+        className="fi"
+        type="text"
+        inputMode="numeric"
+        maxLength={7}
+        placeholder="e.g. 5678"
+        value={num2}
+        onChange={e => setNum2(e.target.value.replace(/\D/g,'').slice(0,7))}
+        style={{ letterSpacing: 6, fontSize: 22, fontWeight: 800, textAlign: 'center' }}
+      />
+    </div>
+
+    {/* Double Jodi toggle */}
+    <div
+      style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+        background: 'rgba(0,255,213,0.05)', border: '1px solid rgba(0,255,213,0.3)',
+        borderRadius: 10, marginBottom: 14, cursor: 'pointer'
+      }}
+      onClick={() => setCycleDigit(cycleDigit === 'cut' ? null : 'cut')}
+    >
+      <div style={{
+        width: 22, height: 22, borderRadius: 6,
+        border: '2px solid #00ffd5',
+        background: cycleDigit === 'cut' ? '#00ffd5' : 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0, transition: 'all 0.2s'
+      }}>
+        {cycleDigit === 'cut' && <span style={{ color: '#001a17', fontWeight: 900, fontSize: 14 }}>✓</span>}
+      </div>
+      <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>
+        Double Jodi Hatao (00, 11, 22...)
+      </span>
+    </div>
+
+    {(!num || !num2) && (
+      <div className="infobox" style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba' }}>
+        ⬆️ Dono digit fields bharo
+      </div>
+    )}
+
+    {num && num2 && generated.length === 0 && (
+      <div className="infobox" style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffeeba' }}>
+        ⚠️ Koi jodi nahi bani — digits check karo
+      </div>
+    )}
+
+    {generated.length > 0 && <>
+      <div className="infobox" style={{ background: 'rgba(0,255,213,0.08)', color: '#00ffd5', border: '1px solid rgba(0,255,213,0.4)' }}>
+        🎯 <strong>{generated.length} Jodis</strong> generate hongi
+      </div>
+
+      <div className="fg">
+        <label className="fl">📋 Generated Jodis</label>
+        <div className="jodi-scroll">
+          <div className="jodi-grid">
+            {generated.map(j => (
+              <div key={j} className="jchip active" style={{ cursor: 'default' }}>{j}</div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="fg">
+        <label className="fl">💰 Amount per Jodi (Min ₹10)</label>
+        <input
+          className="fi"
+          type="number"
+          placeholder="₹0"
+          value={amt}
+          onChange={e => setAmt(e.target.value)}
+        />
+        <div className="chips-row">
+          {chips.map(c => (
+            <div key={c} className={`chip${amt === String(c) ? ' active' : ''}`} onClick={() => setAmt(String(c))}>₹{c}</div>
+          ))}
+        </div>
+      </div>
+
+      {Number(amt) >= 10 && <>
+        <div className="infobox">
+          📊 <strong>{generated.length} jodis</strong> × ₹<strong>{amt}</strong> = Total: <strong>₹{totalGenAmt.toLocaleString()}</strong>
+        </div>
+        <button
+          className="btn-place"
+          disabled={submitting}
+          style={{ opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}
+          onClick={async () => {
+            if (submitting) return;
+            setSubmitting(true);
+            try {
+              await onSubmit({
+                numbers: generated.map(j => ({ num: j, amt: Number(amt) })),
+                totalAmt: totalGenAmt,
+                session: openClose
+              });
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+        >
+          {submitting ? '⏳ Placing...' : `🎯 Place All — ₹${totalGenAmt.toLocaleString()}`}
+        </button>
+      </>}
+    </>}
+  </>;
+})()}
       </div>
     </div>
   );
