@@ -17,6 +17,7 @@ export const GAME_TYPES = [
   {id:'odd_even',          label:'ODD / EVEN',        icon:'odd_even',       desc:'Bet on Odd or Even',          win:'2×',   numType:'oddeven'},
   {id:'dp_motor',          label:'DP MOTOR',          icon:'dp_motor',       desc:'Double Pana motor bet',       win:'300×', numType:'pana_bulk'},
   {id:'sp_motor',          label:'SP MOTOR',          icon:'sp_motor',       desc:'Single Pana motor bet',       win:'150×', numType:'pana_bulk'},
+  {id:'crossing_jodi', label:'CROSSING JODI', icon:'jodi', desc:'Digits cross karke jodis banao', win:'90×', numType:'jodi_bulk'},
   {id:'red_jodi',          label:'RED JODI',          icon:'red_jodi',       desc:'Special red jodi bet',        win:'90×',  numType:'jodi'},
   {id:'cycle_panna', label:'CYCLE PANNA', icon:'cycle_jodi', desc:'Jodi select karo, panas dekho', win:'150×', numType:'pana_bulk'},
   {id:'cycle_jodi',        label:'CYCLE JODI',        icon:'cycle_jodi',     desc:'All jodis with a digit',      win:'90×',  numType:'jodi_bulk'},
