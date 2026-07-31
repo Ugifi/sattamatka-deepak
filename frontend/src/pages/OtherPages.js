@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Browser } from '@capacitor/browser';
 
 // ── DARK NEON THEME SHARED STYLES ──
 const B = {
