@@ -2,19 +2,19 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 
 import AuthScreen from './components/AuthScreen';
-import Drawer from './components/Drawer';
 import Toast from './components/Toast';
-import { AddModal, WithdrawModal } from './components/Modals';
+import { DepositModal } from './pages/OtherPages';
+import { WithdrawModal } from './components/Modals';
 
 import HomeScreen from './pages/HomeScreen';
 import GameTypePage from './pages/GameTypePage';
 import BetForm from './pages/BetForm';
-import { BidsPage, TxnsPage, WalletPage, SupportPage, HowToPlayPage, FAQPage, TermsPage, PrivacyPage } from './pages/OtherPages';
+import { BidsPage, TxnsPage, WalletPage, SupportPage, HowToPlayPage, FAQPage, TermsPage, PrivacyPage, ReferralPage, GameRatesPage } from './pages/OtherPages';
 import AdminPanel, { AdminLogin } from './pages/AdminPanel';
 
 import { INIT_BIDS, INIT_TXNS } from './data/gameData';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API = 'https://ziddi-1-we11.onrender.com';
 
 function apiCall(path, method = 'GET', body = null) {
   const token = localStorage.getItem('mk_token');
@@ -28,360 +28,439 @@ function apiCall(path, method = 'GET', body = null) {
   }).then(r => r.json());
 }
 
-// 🔥 FIX: ProfileScreen mein navigate aur onLogout pass kiya 🔥
-function ProfileScreen({ user, showToast, navigate, onLogout }) {
-  const [name, setName] = useState(user?.name || 'Vikas Verma');
+// ── SVG ICONS ─────────────────────────────────────────────────────────────────
+const IconTransaction = ({ size = 24, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="3" y="3" width="18" height="18" rx="2" stroke={color} strokeWidth="1.8"/>
+    <line x1="7" y1="8" x2="17" y2="8" stroke={color} strokeWidth="1.8" strokeLinecap="round"/>
+    <line x1="7" y1="12" x2="17" y2="12" stroke={color} strokeWidth="1.8" strokeLinecap="round"/>
+    <line x1="7" y1="16" x2="13" y2="16" stroke={color} strokeWidth="1.8" strokeLinecap="round"/>
+  </svg>
+);
+
+const IconBids = ({ size = 24, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <polyline points="14,2 14,8 20,8" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <line x1="9" y1="13" x2="15" y2="13" stroke={color} strokeWidth="1.8" strokeLinecap="round"/>
+    <line x1="9" y1="17" x2="12" y2="17" stroke={color} strokeWidth="1.8" strokeLinecap="round"/>
+  </svg>
+);
+
+const IconHome = ({ size = 26, color = '#00ffd5' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 17L4.5 7L9 12L12 4L15 12L19.5 7L22 17H2Z" fill={color} opacity="0.2"/>
+    <path d="M2 17L4.5 7L9 12L12 4L15 12L19.5 7L22 17" stroke={color} strokeWidth="2" strokeLinejoin="round"/>
+    <rect x="2" y="17" width="20" height="3" rx="1.5" fill={color}/>
+    <circle cx="4.5" cy="6.5" r="1.5" fill={color}/>
+    <circle cx="12" cy="3.5" r="1.5" fill={color}/>
+    <circle cx="19.5" cy="6.5" r="1.5" fill={color}/>
+  </svg>
+);
+
+const IconWallet = ({ size = 24, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z" stroke={color} strokeWidth="1.8"/>
+    <path d="M16 3L20 7H4L8 3H16Z" stroke={color} strokeWidth="1.8" strokeLinejoin="round"/>
+    <circle cx="17" cy="14" r="2" stroke={color} strokeWidth="1.6"/>
+  </svg>
+);
+
+const IconSupport = ({ size = 24, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="8" cy="10" r="1" fill={color}/>
+    <circle cx="12" cy="10" r="1" fill={color}/>
+    <circle cx="16" cy="10" r="1" fill={color}/>
+  </svg>
+);
+
+// ── LANGUAGE SELECTION SCREEN ─────────────────────────────────────────────────
+function LanguageScreen({ onSelect }) {
+  const languages = [
+    { label: 'English', val: 'en' },
+    { label: 'हिन्दी', val: 'hi' },
+    { label: 'తెలుగు', val: 'te' },
+    { label: 'ಕನ್ನಡ', val: 'kn' },
+  ];
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #021a14 0%, #063d35 60%, #0a4a3e 100%)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+      fontFamily: '"Segoe UI", sans-serif',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      {/* Background circles */}
+      <div style={{ position:'absolute', top:'-5%', left:'-10%', width:300, height:300, borderRadius:'50%', background:'rgba(0,255,213,0.04)', filter:'blur(60px)' }}/>
+      <div style={{ position:'absolute', bottom:'-10%', right:'-10%', width:350, height:350, borderRadius:'50%', background:'rgba(255,215,0,0.06)', filter:'blur(70px)' }}/>
+
+      {/* Logo */}
+      <div style={{ width:100, height:100, borderRadius:'50%', background:'rgba(0,255,213,0.1)', border:'2px solid rgba(0,255,213,0.3)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16, boxShadow:'0 0 30px rgba(0,255,213,0.15)', overflow:'hidden' }}>
+        <img src={`${process.env.PUBLIC_URL}/th.jpg`} alt="Logo" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+      </div>
+
+      <div style={{ color:'#fff', fontSize:26, fontWeight:900, letterSpacing:2, marginBottom:4, textShadow:'0 2px 10px rgba(0,255,213,0.2)' }}>MATKA BOSS</div>
+      <div style={{ color:'#FFD700', fontSize:12, fontWeight:700, letterSpacing:1, marginBottom:40 }}>India's #1 Premium Matka Platform</div>
+
+      {/* Select Language Title */}
+      <div style={{ color:'#fff', fontSize:22, fontWeight:800, marginBottom:6 }}>Select your</div>
+      <div style={{ color:'#FFD700', fontSize:28, fontWeight:900, marginBottom:32, letterSpacing:1 }}>Language</div>
+
+      {/* Language Buttons Grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, width:'100%', maxWidth:320 }}>
+        {languages.map(l => (
+          <button key={l.val} onClick={() => onSelect(l.val)}
+            style={{
+              padding: '20px 0',
+              borderRadius: 16,
+              border: '2px solid rgba(0,255,213,0.25)',
+              background: 'rgba(0,255,213,0.08)',
+              color: '#00ffd5',
+              fontSize: 18,
+              fontWeight: 800,
+              cursor: 'pointer',
+              backdropFilter: 'blur(10px)',
+              transition: 'all 0.2s',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+              letterSpacing: 0.5
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background='rgba(0,255,213,0.18)'; e.currentTarget.style.transform='scale(1.04)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background='rgba(0,255,213,0.08)'; e.currentTarget.style.transform='scale(1)'; }}>
+            {l.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Marathi button - centered below */}
+      <button onClick={() => onSelect('mr')}
+        style={{
+          marginTop: 14,
+          padding: '20px 80px',
+          borderRadius: 16,
+          border: '2px solid rgba(0,255,213,0.25)',
+          background: 'rgba(0,255,213,0.08)',
+          color: '#00ffd5',
+          fontSize: 18,
+          fontWeight: 800,
+          cursor: 'pointer',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+          letterSpacing: 0.5,
+          transition: 'all 0.2s'
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background='rgba(0,255,213,0.18)'; e.currentTarget.style.transform='scale(1.04)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background='rgba(0,255,213,0.08)'; e.currentTarget.style.transform='scale(1)'; }}>
+        मराठी
+      </button>
+
+      <div style={{ color:'rgba(255,255,255,0.3)', fontSize:11, marginTop:40, fontWeight:600 }}>18+ Only · Play Responsibly</div>
+    </div>
+  );
+}
+
+// ── DARK DRAWER ───────────────────────────────────────────────────────────────
+function BlueDrawer({ user, onClose, onNav, onLogout, wallet }) {
+  const menuItems = [
+    { section: 'ACCOUNT' },
+    { ic: '👛', label: 'My Wallet',           id: 'wallet' },
+    { ic: '📋', label: 'Transaction History', id: 'txns' },
+    { ic: '✏️', label: 'Edit Profile',        id: 'profile' },
+    { ic: '🎁', label: 'Refer & Earn',        id: 'referral' },
+    { section: 'GAMES' },
+    { ic: '🎮', label: 'All Games',           id: 'home' },
+    { ic: '🏆', label: 'Win History',         id: 'bids' },
+    { section: 'HELP & SUPPORT' },
+    { ic: '💬', label: 'WhatsApp Support',    id: 'wa',  action: () => window.open('https://wa.me/919999999999','_blank') },
+    { ic: '✈️', label: 'Telegram Support',   id: 'tg',  action: () => window.open('https://t.me/matkaking_support','_blank') },
+    { ic: '📖', label: 'How to Play',         id: 'htp' },
+    { ic: '🎰', label: 'Game Rates',          id: 'gamerates' },
+    { ic: '❓', label: 'FAQ',                 id: 'faq' },
+    { ic: '📜', label: 'Terms & Conditions',  id: 'terms' },
+    { ic: '🔒', label: 'Privacy Policy',      id: 'privacy' },
+  ];
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:500, backdropFilter:'blur(3px)' }} />
+      <div style={{ position:'fixed', top:0, left:0, width:280, height:'100%', background:'#011a13', zIndex:501, overflowY:'auto', animation:'slideDrawerIn 0.25s ease', boxShadow:'4px 0 24px rgba(0,255,213,0.08)', paddingBottom:40, borderRight:'1px solid rgba(0,255,213,0.1)' }}>
+        <style>{`
+          @keyframes slideDrawerIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+          .drawer-menu-item:hover { background: rgba(0,255,213,0.06) !important; transform: translateX(4px); }
+        `}</style>
+
+        <div style={{ background:'linear-gradient(135deg, #021a14, #063d35)', padding:'20px 16px 16px', display:'flex', justifyContent:'space-between', alignItems:'flex-start', borderBottom:'1px solid rgba(0,255,213,0.1)' }}>
+          <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+            <div style={{ width:50, height:50, borderRadius:'50%', background:'rgba(0,255,213,0.1)', border:'2px solid rgba(0,255,213,0.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0, color:'#00ffd5' }}>
+              {(user?.name || 'U').charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div style={{ fontSize:16, fontWeight:800, color:'#fff', marginBottom:2 }}>{user?.name || 'Player'}</div>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>{user?.mobile || ''}</div>
+              <div style={{ fontSize:11, color:'#00ffd5', marginTop:2 }}>
+                💰 Rs.{Number(wallet || 0).toLocaleString('en-IN', { minimumFractionDigits:2 })}
+              </div>
+            </div>
+          </div>
+          <div onClick={onClose} style={{ color:'#00ffd5', fontSize:22, cursor:'pointer', padding:'2px 4px', lineHeight:1 }}>✕</div>
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, padding:'14px 12px', borderBottom:'1px solid rgba(0,255,213,0.08)', background:'#0a2e26' }}>
+          {[{ ic:'💰', label:'Add Fund', id:'add' }, { ic:'💸', label:'Withdraw', id:'with' }, { ic:'🎯', label:'My Bids', id:'bids' }].map(btn => (
+            <div key={btn.id} onClick={() => { onNav(btn.id); onClose(); }}
+              style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, cursor:'pointer', padding:'8px 4px', borderRadius:10, transition:'background 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,255,213,0.06)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <div style={{ width:40, height:40, background:'rgba(0,255,213,0.08)', border:'1.5px solid rgba(0,255,213,0.2)', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>{btn.ic}</div>
+              <div style={{ fontSize:11, color:'#00ffd5', fontWeight:700, textAlign:'center' }}>{btn.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {menuItems.map((item, i) => {
+          if (item.section) return (
+            <div key={i} style={{ fontSize:10, color:'#00ffd5', letterSpacing:2, textTransform:'uppercase', padding:'14px 16px 4px', fontWeight:700 }}>{item.section}</div>
+          );
+          return (
+            <div key={i} className="drawer-menu-item"
+              onClick={() => { if (item.action) item.action(); else onNav(item.id); onClose(); }}
+              style={{ display:'flex', alignItems:'center', gap:14, padding:'13px 16px', cursor:'pointer', borderBottom:'1px solid rgba(0,255,213,0.06)', transition:'all 0.15s' }}>
+              <div style={{ width:36, height:36, background:'rgba(0,255,213,0.08)', border:'1px solid rgba(0,255,213,0.15)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>{item.ic}</div>
+              <div style={{ fontSize:15, fontWeight:600, color:'#fff' }}>{item.label}</div>
+              <div style={{ marginLeft:'auto', color:'#00ffd5', fontSize:18 }}>›</div>
+            </div>
+          );
+        })}
+
+        <div onClick={onLogout}
+          style={{ display:'flex', alignItems:'center', gap:14, padding:'13px 16px', cursor:'pointer', marginTop:8, borderTop:'1px solid rgba(0,255,213,0.08)' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,23,68,0.08)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+          <div style={{ width:36, height:36, background:'rgba(255,23,68,0.08)', border:'1px solid rgba(255,23,68,0.2)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>🚪</div>
+          <div style={{ fontSize:15, fontWeight:700, color:'#ff1744' }}>Logout</div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── PROFILE SCREEN ────────────────────────────────────────────────────────────
+function ProfileScreen({ user, showToast }) {
+  const [name, setName]         = useState(user?.name || '');
   const [password, setPassword] = useState('');
   const [updating, setUpdating] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
-
-  // 🎲 Random Avatar Logic Start
-  const randomAvatars = [
-    "https://cdn-icons-png.flaticon.com/512/4140/4140048.png", // Boy 1
-    "https://cdn-icons-png.flaticon.com/512/4140/4140047.png", // Girl 1
-    "https://cdn-icons-png.flaticon.com/512/4139/4139981.png", // Boy 2
-    "https://cdn-icons-png.flaticon.com/512/4139/4139993.png", // Girl 2
-    "https://cdn-icons-png.flaticon.com/512/4140/4140037.png", // Man
-    "https://cdn-icons-png.flaticon.com/512/149/149071.png"    // Default classic
-  ];
-  const defaultRandomAvatar = useRef(randomAvatars[Math.floor(Math.random() * randomAvatars.length)]);
-  // 🎲 Random Avatar Logic End
-
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
-      showToast('Photo selected! Click Update to Save.', 'ok');
-    }
-  };
 
   const handleUpdate = async () => {
     if (!name) return showToast('Naam khali nahi chhod sakte!', 'err');
-    
     setUpdating(true);
     try {
       const token = localStorage.getItem('mk_token');
-
-      // 1. Password Update Logic
       if (password) {
         if (password.length < 6) throw new Error('Password min 6 characters ka ho');
         const resPass = await apiCall('/api/auth/update-password', 'POST', { newPassword: password });
         if (!resPass.success) throw new Error(resPass.message || 'Password update fail');
       }
-
-      // 2. Profile Name & Image Update
-      const formData = new FormData();
-      formData.append('name', name);
-      if (selectedFile) {
-        formData.append('avatar', selectedFile); 
-      }
-
       const response = await fetch(`${API}/api/auth/update-profile`, {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${token}` 
-        },
-        body: formData
+        method:'POST',
+        headers:{ 'Authorization':`Bearer ${token}`, 'Content-Type':'application/json' },
+        body: JSON.stringify({ name })
       });
-
       const resProfile = await response.json();
-      
-      if (resProfile.success) {
-        showToast('Profile Updated Successfully! 🚀', 'ok');
-        setPassword('');
-        setSelectedFile(null);
-      } else {
-        throw new Error(resProfile.message || 'Profile update fail');
-      }
-
-    } catch (err) {
-      console.error(err);
-      showToast(err.message || 'Server connection error!', 'err');
-    } finally {
-      setUpdating(false);
-    }
+      if (resProfile.success) { showToast('Profile Updated! 🚀', 'ok'); setPassword(''); }
+      else throw new Error(resProfile.message || 'Profile update fail');
+    } catch (err) { showToast(err.message || 'Server error!', 'err'); }
+    finally { setUpdating(false); }
   };
 
+  const inp = { width:'100%', padding:'12px 14px', borderRadius:10, border:'2px solid rgba(0,255,213,0.25)', background:'rgba(0,255,213,0.06)', color:'#fff', fontSize:15, outline:'none', boxSizing:'border-box', fontFamily:'inherit', marginBottom:14 };
+  const lbl = { fontSize:11, color:'#00ffd5', fontWeight:700, textTransform:'uppercase', letterSpacing:2, display:'block', marginBottom:6 };
+
   return (
-    <div className="screen" style={{ padding: '20px 15px', paddingBottom: 80, background: '#021a14', minHeight: '100vh', color: '#fff' }}>
-      
-      {/* Profile Form Block */}
-      <div style={{ background:'rgba(0, 255, 200, 0.05)', padding:'20px', borderRadius:12, border:'1px solid rgba(0, 255, 213, 0.3)', marginBottom:20, boxShadow: '0 4px 15px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }}>
-        <h3 style={{ color:'#FFD700', marginTop:0, textAlign:'center', fontFamily:'Poppins, sans-serif', fontSize: 22, textShadow: '0 0 10px rgba(255,215,0,0.6)' }}>👤 MY PROFILE</h3>
-        
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 25 }}>
-          <div style={{ position: 'relative', width: 95, height: 95 }}>
-            {/* 🔥 Updated the image src logic here 🔥 */}
-            <img 
-              src={avatarPreview || (user?.profile_pic ? `${API}${user.profile_pic}` : defaultRandomAvatar.current)} 
-              alt="Avatar" 
-              style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '3px solid #00ffd5', padding: 3, background: 'rgba(0, 255, 200, 0.05)', boxShadow: '0 0 10px #00ffd5' }} 
-            />
-            <label style={{ position: 'absolute', bottom: 0, right: 0, background: '#00ffd5', width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid #063d35' }}>
-              📷
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
-            </label>
-          </div>
+    <div style={{ background:'#021a14', minHeight:'100vh', paddingBottom:80 }}>
+      <div style={{ background:'linear-gradient(135deg, #021a14, #063d35)', padding:'24px 20px', textAlign:'center', borderBottom:'1px solid rgba(0,255,213,0.1)' }}>
+        <div style={{ width:72, height:72, background:'rgba(0,255,213,0.1)', border:'3px solid rgba(0,255,213,0.3)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 10px', fontSize:32, color:'#00ffd5' }}>
+          {(user?.name || 'U').charAt(0).toUpperCase()}
         </div>
+        <div style={{ color:'#fff', fontWeight:800, fontSize:18 }}>{user?.name || 'User'}</div>
+        <div style={{ color:'rgba(255,255,255,0.5)', fontSize:12, marginTop:2 }}>📱 {user?.mobile || '—'}</div>
+      </div>
 
-        <div style={{ marginBottom:15 }}>
-          <label style={{ color:'#00ffd5', fontSize:12, marginBottom:5, display:'block', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>Mobile Number Verified ✅</label>
-          <input 
-            value={user?.mobile || '9999999999'} 
-            disabled
-            style={{ width:'100%', padding:'12px', borderRadius:10, border:'1px solid #00ffd5', background:'rgba(0, 255, 213, 0.05)', color:'#FFD700', boxSizing:'border-box', textAlign: 'center', fontWeight: 'bold' }} 
-          />
-        </div>
-
-        <div style={{ marginBottom:15 }}>
-          <label style={{ color:'#00ffd5', fontSize:12, marginBottom:5, display:'block', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>Full Name</label>
-          <input 
-            value={name} 
-            onChange={e => setName(e.target.value)} 
-            style={{ width:'100%', padding:'12px', borderRadius:10, border:'1px solid #00ffd5', background:'rgba(0, 255, 213, 0.05)', color:'#fff', boxSizing:'border-box', textAlign: 'center', fontWeight: 'bold' }} 
-          />
-        </div>
-
-        <div style={{ marginBottom:25 }}>
-          <label style={{ color:'#00ffd5', fontSize:12, marginBottom:5, display:'block', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>New Password</label>
-          <input 
-            type="password" 
-            placeholder="Naya password likhein (optional)" 
-            value={password} 
-            onChange={e => setPassword(e.target.value)} 
-            style={{ width:'100%', padding:'12px', borderRadius:10, border:'1px solid #00ffd5', background:'rgba(0, 255, 213, 0.05)', color:'#fff', boxSizing:'border-box', textAlign: 'center', fontWeight: 'bold' }} 
-          />
-        </div>
-
-        <button 
-          onClick={handleUpdate} 
-          disabled={updating}
-          style={{ width:'100%', padding:'14px', background:'linear-gradient(90deg, #14f4ce, #e0800b)', border:'none', borderRadius:'10px 40px 10px 40px', color:'#001a17', fontWeight:900, fontSize:15, cursor: updating ? 'not-allowed' : 'pointer', opacity: updating ? 0.7 : 1, position: 'relative', overflow: 'hidden', boxShadow: 'none', letterSpacing: 1 }}>
-          {updating ? 'SAVING DATA...' : 'UPDATE PROFILE'}
+      <div style={{ background:'#0a2e26', margin:'12px', borderRadius:14, padding:'16px', border:'1.5px solid rgba(0,255,213,0.15)', boxShadow:'0 4px 16px rgba(0,255,213,0.06)' }}>
+        <label style={lbl}>Mobile Number</label>
+        <input value={user?.mobile || ''} disabled style={{ ...inp, background:'rgba(255,255,255,0.03)', color:'rgba(255,255,255,0.35)', cursor:'not-allowed', border:'2px solid rgba(255,255,255,0.08)' }} />
+        <label style={lbl}>Full Name</label>
+        <input value={name} onChange={e => setName(e.target.value)} style={inp} />
+        <label style={lbl}>New Password (Optional)</label>
+        <input type="password" placeholder="Naya password (min 6 char)" value={password} onChange={e => setPassword(e.target.value)} style={{ ...inp, marginBottom:0 }} />
+        <button onClick={handleUpdate} disabled={updating}
+          style={{ width:'100%', marginTop:14, background:'linear-gradient(90deg, #14f4ce, #e0800b)', color:'#001a17', border:'none', borderRadius:12, padding:14, fontSize:15, fontWeight:800, cursor:updating?'not-allowed':'pointer', opacity:updating?0.6:1, letterSpacing:2, textTransform:'uppercase', boxShadow:'0 4px 14px rgba(0,255,213,0.25)' }}>
+          {updating ? '⏳ Saving...' : '💾 UPDATE PROFILE'}
         </button>
       </div>
 
-      {/* Help & Support Block */}
-      <div style={{ background:'rgba(0, 255, 200, 0.05)', padding:'20px', borderRadius:12, border:'1px solid rgba(0, 255, 213, 0.3)', position: 'relative', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.4)', marginBottom: 20 }}>
-        <h3 style={{ color:'#FFD700', marginTop:0, textAlign:'center', fontFamily:'Poppins, sans-serif', marginBottom: 20,fontSize: 22, textShadow: '0 0 10px rgba(255,215,0,0.6)' }}>🎧 HELP & SUPPORT</h3>
-        <div style={{ display:'flex', gap:10 }}>
-          <button onClick={() => window.open('https://wa.me/919999999999', '_blank')} style={{ flex:1, padding:'14px 10px', background:'rgba(37,211,102,0.1)', border:'1px solid #25D366', borderRadius:8, color:'#25D366', fontWeight:'bold' }}>💬 WhatsApp</button>
-          <button onClick={() => window.open('https://t.me/matkaking_support', '_blank')} style={{ flex:1, padding:'14px 10px', background:'rgba(0,136,204,0.1)', border:'1px solid #0088cc', borderRadius:8, color:'#0088cc', fontWeight:'bold' }}>✈️ Telegram</button>
+      <div style={{ background:'#0a2e26', margin:'0 12px', borderRadius:14, overflow:'hidden', border:'1.5px solid rgba(0,255,213,0.15)', boxShadow:'0 4px 16px rgba(0,255,213,0.06)' }}>
+        <div style={{ padding:'12px 16px', background:'rgba(0,255,213,0.06)', borderBottom:'1px solid rgba(0,255,213,0.1)', fontSize:12, fontWeight:800, color:'#00ffd5', textTransform:'uppercase', letterSpacing:1 }}>🎧 Help & Support</div>
+        <div onClick={() => window.open('https://wa.me/919999999999','_blank')} style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', borderBottom:'1px solid rgba(0,255,213,0.06)', cursor:'pointer' }}>
+          <div style={{ width:40, height:40, background:'rgba(0,230,118,0.08)', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>💬</div>
+          <div style={{ flex:1 }}><div style={{ fontWeight:700, color:'#fff' }}>WhatsApp Support</div><div style={{ fontSize:11, color:'rgba(255,255,255,0.4)' }}>+91 9999999999</div></div>
+          <div style={{ color:'#00ffd5', fontSize:20 }}>›</div>
+        </div>
+        <div onClick={() => window.open('https://t.me/matkaking_support','_blank')} style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', cursor:'pointer' }}>
+          <div style={{ width:40, height:40, background:'rgba(0,255,213,0.08)', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>✈️</div>
+          <div style={{ flex:1 }}><div style={{ fontWeight:700, color:'#fff' }}>Telegram Support</div><div style={{ fontSize:11, color:'rgba(255,255,255,0.4)' }}>Quick reply in 5 mins</div></div>
+          <div style={{ color:'#00ffd5', fontSize:20 }}>›</div>
         </div>
       </div>
-
-      {/* 🔥 NEW MORE SECTION SHIFTED HERE 🔥 */}
-      <div style={{ padding: '5px' }}>
-        <div style={{ color: '#e0800b', fontSize: 13, fontWeight: 900, letterSpacing: 1, marginBottom: 10, fontFamily: "'Poppins', sans-serif" }}>
-          MORE
-        </div>
-
-        {[
-          { ic: '📖', l: 'How to Play', fn: () => navigate && navigate('htp') },
-          { ic: '❓', l: 'FAQ', fn: () => navigate && navigate('faq') },
-          { ic: '📜', l: 'Terms & Conditions', fn: () => navigate && navigate('terms') },
-          { ic: '🔒', l: 'Privacy Policy', fn: () => navigate && navigate('privacy') },
-        ].map((item, i) => (
-          <div key={i} onClick={item.fn} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '12px 0', borderBottom: '1px solid rgba(0,255,213,0.1)', cursor: 'pointer'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,255,213,0.05)',
-                border: '1px solid rgba(0,255,213,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18
-              }}>
-                {item.ic}
-              </div>
-              <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>{item.l}</div>
-            </div>
-            <div style={{ color: '#e0800b', fontSize: 20, fontWeight: 900 }}>›</div>
-          </div>
-        ))}
-
-        {/* LOGOUT BUTTON */}
-        <button onClick={onLogout} style={{
-          width: '100%', padding: '14px', marginTop: 25, borderRadius: 10,
-          background: 'rgba(255, 34, 68, 0.05)', border: '1px solid #ff2244',
-          color: '#ff2244', fontWeight: 900, fontSize: 16, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, letterSpacing: 1, fontFamily: "'Poppins', sans-serif",
-          transition: 'transform 0.2s'
-        }}>
-           LOGOUT
-        </button>
-      </div>
-
     </div>
   );
 }
 
-// ── STARLINE / DISAWAR GAME LIST PAGE ──
-function CategoryGamesScreen({ category, onPlay }) {
-  const [games, setGames] = useState([]);
+// ── CATEGORY GAMES SCREEN ─────────────────────────────────────────────────────
+function CategoryGamesScreen({ category, apiCategory, onPlay }) {
+  const [games, setGames]     = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tooltipInfo, setTooltipInfo] = useState(null);
-
-  const getGameIcon = (name) => {
-    if (!name) return '🎯';
-    const n = name.toUpperCase();
-    if (n.includes('MORNING'))  return '🌅';
-    if (n.includes('DISAWAR'))  return '🎰';
-    return '🎯';
-  };
-
-  const formatResult = (g) => {
-    if (g.open_result || g.close_result) {
-      return `${g.open_result || '***'} - ${g.jodi_result || '--'} - ${g.close_result || '***'}`;
-    }
-    return '*** -- ***';
-  };
-
-  const renderWaveText = (text) => {
-    if (!text) return null;
-    let charIndex = 0;
-    return text.split(' ').map((word, wIdx, arr) => (
-      <React.Fragment key={wIdx}>
-        {word.split('').map((char) => {
-          const currentDelay = `${charIndex * 0.1}s`;
-          charIndex++;
-          return (
-            <span key={charIndex} style={{ display: 'inline-block', animation: 'wave 1.5s infinite', animationDelay: currentDelay }}>
-              {char}
-            </span>
-          );
-        })}
-        {wIdx < arr.length - 1 && <>&nbsp;&nbsp;</>}
-      </React.Fragment>
-    ));
-  };
 
   useEffect(() => {
     const fetchGames = async () => {
       try {
         const token = localStorage.getItem('mk_token');
-        const res = await fetch(`${API}/api/games?category=${category}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const fetchCat = apiCategory || category;
+        const res = await fetch(`${API}/api/games?category=${fetchCat}`, { headers:{ 'Authorization':`Bearer ${token}` } });
         const data = await res.json();
         if (data.success) setGames(Array.isArray(data.games) ? data.games : []);
-      } catch (err) {
-        console.error('CategoryGames fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
+      } catch { } finally { setLoading(false); }
     };
     fetchGames();
-  }, [category]);
+  }, [category, apiCategory]);
+
+  const formatResult = g => {
+    if (g.open_result || g.close_result)
+      return `${g.open_result || '***'}-${g.jodi_result || '--'}-${g.close_result || '***'}`;
+    return '***_**_***';
+  };
+
+  const isRunning = g => g.status === 'open';
 
   return (
-    <div className="screen" style={{ paddingBottom: 80, background: '#021a14', minHeight: '100vh' }}>
-      
-      {/* Header */}
-      <div style={{ background:'rgba(2, 31, 27, 0.95)', padding:'20px 14px', borderBottom:'1.5px solid rgba(0, 255, 213, 0.3)', marginBottom:20, textAlign:'center' }}>
-        <div style={{ color:'#FFD700', fontSize:22, fontWeight:900, fontFamily:'Poppins, sans-serif', letterSpacing:2, textTransform: 'uppercase', textShadow: '0 0 10px rgba(255,215,0,0.6)' }}>
-          {renderWaveText(`${category === 'starline' ? 'STARLINE' : 'DISAWAR'} GAMES`)}
+    <div style={{ background:'#021a14', minHeight:'100vh', paddingBottom:80, fontFamily:"'Nunito','Segoe UI',sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+        .cg-card { background: #0a2e26; border-radius: 16px; margin: 0 12px 12px; overflow: visible; box-shadow: 0 4px 16px rgba(0,255,213,0.06); transition: transform 0.2s, box-shadow 0.2s; border: 1px solid rgba(0,255,213,0.15); padding: 14px 16px; }
+        .cg-card:hover { transform: translateY(-2px); box-shadow: 0 6px 22px rgba(0,255,213,0.12); }
+        .cg-card-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:4px; }
+        .cg-card-name { font-family:'Nunito',sans-serif; font-size:18px; font-weight:900; color:#fff; letter-spacing:0.5px; text-transform:uppercase; line-height:1.2; }
+        .cg-result { font-size:14px; font-weight:700; color:#00ffd5; letter-spacing:2px; margin-bottom:6px; }
+        .cg-status-running { display:inline-flex; align-items:center; gap:5px; font-size:13px; font-weight:700; color:#00e676; margin-bottom:8px; }
+        .cg-status-closed  { display:inline-flex; align-items:center; gap:5px; font-size:13px; font-weight:700; color:#ff1744; margin-bottom:8px; }
+        .cg-pulse-dot { width:8px; height:8px; border-radius:50%; background:#00e676; animation:cgPulse 1.4s ease-in-out infinite; flex-shrink:0; }
+        @keyframes cgPulse { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.65);} }
+        .cg-bottom-row { display:flex; align-items:center; justify-content:space-between; margin-top:2px; }
+        .cg-time-wrap { display:flex; align-items:center; gap:16px; }
+        .cg-time-lbl { font-size:12px; color:rgba(255,255,255,0.4); font-weight:600; margin-bottom:1px; }
+        .cg-time-val { font-size:14px; font-weight:700; color:#00ffd5; }
+        .cg-divider-v { width:1px; height:32px; background:rgba(0,255,213,0.15); flex-shrink:0; }
+        .cg-play-circle { width:48px; height:48px; border-radius:50%; border:none; background:linear-gradient(90deg, #14f4ce, #e0800b); color:#001a17; font-size:17px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; box-shadow:0 4px 14px rgba(0,255,213,0.30); transition:transform 0.2s, box-shadow 0.2s; margin-top:-28px; }
+        .cg-play-circle:hover { transform:scale(1.1); box-shadow:0 6px 20px rgba(0,255,213,0.40); }
+        .cg-play-circle:active { transform:scale(0.95); }
+        .cg-section-label { padding:4px 12px 8px; font-size:13px; font-weight:800; color:#00ffd5; letter-spacing:2px; text-transform:uppercase; display:flex; align-items:center; gap:6px; }
+        .cg-section-label::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,rgba(0,255,213,0.3),transparent); }
+        .cg-loader { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; gap:14px; }
+        .cg-loader-ring { width:44px; height:44px; border:4px solid rgba(0,255,213,0.15); border-top-color:#00ffd5; border-radius:50%; animation:cgSpin 0.8s linear infinite; }
+        @keyframes cgSpin { to { transform:rotate(360deg); } }
+      `}</style>
+
+      <div style={{ background:'linear-gradient(135deg, #021a14, #063d35)', padding:'16px', textAlign:'center', borderBottom:'1px solid rgba(0,255,213,0.1)', boxShadow:'0 2px 12px rgba(0,255,213,0.08)' }}>
+        <div style={{ fontSize:32, marginBottom:4 }}>
+          {category === 'starline' ? '⭐' : category === 'jackpot' ? '🎰' : '🎯'}
+        </div>
+        <div style={{ color:'#fff', fontSize:20, fontWeight:900, letterSpacing:2, textTransform:'uppercase' }}>
+          {category === 'starline' ? 'Matka Starline' : category === 'jackpot' ? 'KING JACKPOT' : 'DISAWAR'} GAMES
+        </div>
+        <div style={{ color:'rgba(255,255,255,0.5)', fontSize:11, fontWeight:700, marginTop:2 }}>
+          {games.filter(g => g.status === 'open').length} Games Open
         </div>
       </div>
 
-      <div style={{ padding:'0 15px' }}>
-        {loading ? (
-          <div style={{ textAlign:'center', color:'#00ffd5', padding:60, fontWeight:700 }}>⏳ Loading Games...</div>
-        ) : (
-          games.map(g => (
-            <div key={g.id} style={{
-              position: 'relative', borderRadius: '15px', marginBottom: '25px', overflow: 'visible',
-              background: '#012a23', padding: '15px', border: '2.5px solid #00ffd5',
-              boxShadow: '0 0 15px rgba(0, 255, 213, 0.2)', textAlign: 'center'
-            }}>
-              
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: '15px' }}>
-                <div style={{ 
-                  fontSize: 12, color: '#00ffd5', fontWeight: 800,
-                  background: 'rgba(0,255,213,0.1)', padding: '4px 12px',
-                  borderRadius: '6px', border: '1.5px solid #00ffd5', fontFamily: 'Orbitron, sans-serif'
-                }}>
-                  {g.open_time || '00:00:00'}
+      <div className="cg-section-label" style={{ marginTop:12 }}>🎮 Live Markets</div>
+
+      {loading ? (
+        <div className="cg-loader">
+          <div className="cg-loader-ring" />
+          <span style={{ color:'#00ffd5', fontWeight:700, fontSize:14 }}>Loading Games...</span>
+        </div>
+      ) : games.length === 0 ? (
+        <div style={{ textAlign:'center', color:'rgba(255,255,255,0.4)', padding:60 }}>
+          <div style={{ fontSize:40, marginBottom:10 }}>🚫</div>Koi game available nahi hai.
+        </div>
+      ) : (
+        games.map(g => {
+          const open = isRunning(g);
+          return (
+            <div key={g.id} className="cg-card">
+              <div className="cg-card-top">
+                <div className="cg-card-name">{g.name}</div>
+                <svg width="38" height="38" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0 }}>
+                  <rect x="4" y="7" width="34" height="31" rx="4" stroke="#00ffd5" strokeWidth="2.2" fill="rgba(0,255,213,0.06)"/>
+                  <path d="M4 15H38" stroke="#00ffd5" strokeWidth="2.2"/>
+                  <path d="M14 4V10M28 4V10" stroke="#00ffd5" strokeWidth="2.5" strokeLinecap="round"/>
+                  <rect x="10" y="20" width="5" height="4" rx="1" fill="#00ffd5"/>
+                  <rect x="19" y="20" width="5" height="4" rx="1" fill="#00ffd5"/>
+                  <rect x="28" y="20" width="4" height="4" rx="1" fill="#00ffd5"/>
+                  <rect x="10" y="28" width="5" height="4" rx="1" fill="#00ffd5"/>
+                  <rect x="19" y="28" width="5" height="4" rx="1" fill="#00ffd5"/>
+                </svg>
+              </div>
+
+              <div className="cg-result">{formatResult(g)}</div>
+
+              {open ? (
+                <div className="cg-status-running"><span className="cg-pulse-dot"/>Betting is Running for today</div>
+              ) : (
+                <div className="cg-status-closed"><span style={{ width:8, height:8, borderRadius:'50%', background:'#ff1744', display:'inline-block', flexShrink:0 }}/>Market Closed</div>
+              )}
+
+              <div className="cg-bottom-row">
+                <div className="cg-time-wrap">
+                  <div>
+                    <div className="cg-time-lbl">Time Open :</div>
+                    <div className="cg-time-val">{g.open_time || '--:--'}</div>
+                  </div>
+                  <div className="cg-divider-v"/>
+                  <div>
+                    <div className="cg-time-lbl">Time Close :</div>
+                    <div className="cg-time-val">{g.close_time || '--:--'}</div>
+                  </div>
                 </div>
-
-                <div 
-                  style={{ position: 'relative' }}
-                  onMouseEnter={() => setTooltipInfo(g.id)}
-                  onMouseLeave={() => setTooltipInfo(null)}
-                  onClick={() => setTooltipInfo(tooltipInfo === g.id ? null : g.id)}
-                >
-                  <div style={{ 
-                    color: '#00ffd5', border: '1.5px solid #00ffd5', borderRadius: '50%', 
-                    width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                    fontSize: 12, fontWeight: 900, cursor: 'pointer'
-                  }}>i</div>
-
-                  {tooltipInfo === g.id && (
-                    <div style={{ 
-                      position: 'absolute', right: 0, top: 30,
-                      background: '#012a23', border: '1.5px solid #00ffd5',
-                      borderRadius: 10, padding: '10px 12px', 
-                      color: '#fff', fontSize: 11, fontWeight: 700, zIndex: 100, 
-                      whiteSpace: 'nowrap', boxShadow: '0 8px 16px rgba(0,0,0,0.8)'
-                    }}>
-                      <div style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ color: '#00cc44' }}>🟢</span> Open: <span style={{ color: '#00ffd5' }}>{g.open_time || '--:--'}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ color: '#ff2244' }}>🔴</span> Close: <span style={{ color: '#00ffd5' }}>{g.close_time || '--:--'}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <button className="cg-play-circle"
+                  onClick={() => open && onPlay(g)} disabled={!open}
+                  style={!open ? { background:'#3a3a3a', color:'#666', cursor:'not-allowed', boxShadow:'none', marginTop:'-28px' } : {}}>
+                  {open ? <span style={{ marginLeft:3 }}>▶</span> : <span>▷</span>}
+                </button>
               </div>
-
-              <div style={{ marginBottom: '10px' }}>
-                <div style={{ fontFamily: "'Poppins', sans-serif", fontSize: 26, fontWeight: 900, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 3, textShadow: '0 2px 5px rgba(0,0,0,0.5)', display: 'inline-block' }}>
-                  <span style={{ animation: 'none', display: 'inline-block' }}>{getGameIcon(g.name)}&nbsp;</span>
-                  {renderWaveText(g.name)}
-                </div>
-              </div>
-
-              <div style={{ textAlign: 'center', fontSize: 28, fontWeight: 900, color: '#00ffd5', margin: '10px 0', letterSpacing: '4px', fontFamily: "'Orbitron', sans-serif", textShadow: '0 0 15px #00ffd5' }}>
-                {formatResult(g)}
-              </div>
-
-              <div style={{ fontSize: 12, color: g.status === 'open' ? '#00cc44' : '#ff2244', fontWeight: 800, marginBottom: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textTransform: 'uppercase' }}>
-                <span style={{ width: 8, height: 8, background: g.status === 'open' ? '#00cc44' : '#ff2244', borderRadius: '50%', display: 'inline-block', boxShadow: g.status === 'open' ? '0 0 8px #00cc44' : '0 0 8px #ff2244' }}></span>
-                {g.status || 'CLOSE'}
-              </div>
-
-              <button
-                onClick={() => g.status === 'open' && onPlay(g)}
-                disabled={g.status !== 'open'}
-                style={{
-                  width: '100%', padding: '10px', border: 'none', borderRadius: '10px 40px 10px 40px',
-                  fontSize: '13px', fontWeight: '900', cursor: g.status === 'open' ? 'pointer' : 'not-allowed',
-                  position: 'relative', overflow: 'hidden', background: g.status === 'open' ? 'linear-gradient(90deg, #14f4ce, #e0800b)' : '#69e2a6',
-                  color: g.status === 'open' ? '#001a17' : '#3a5a4a',
-                  boxShadow: 'none',
-                  textTransform: 'uppercase', letterSpacing: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
-                }}
-              >
-                {g.status === 'open' && (
-                  <div style={{ position: 'absolute', top: 0, left: '-100%', width: '100%', height: '100%', background: 'linear-gradient(120deg, transparent, rgba(255,255,255,0.7), transparent)', animation: 'shineMove 2.5s infinite linear' }} />
-                )}
-                {g.status === 'open' && <span style={{ display: 'inline-block', animation: 'spinIcon 2s linear infinite', fontSize: 12 }}>◀</span>}
-                {g.status === 'open' ? 'PLAY NOW' : 'MARKET CLOSED'}
-              </button>
             </div>
-          ))
-        )}
-      </div>
+          );
+        })
+      )}
     </div>
   );
 }
 
-
-// ── MAIN APP ─────────────────────────────────────────────────────────────────
+// ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function App() {
   const isAdmin = window.location.pathname === '/admin' || window.location.search.includes('admin=1');
+
+  const [language, setLanguage] = useState(() => localStorage.getItem('mk_language') || null);
+
+  const handleLanguageSelect = (lang) => {
+    localStorage.setItem('mk_language', lang);
+    setLanguage(lang);
+  };
 
   const [user, setUser]                   = useState(null);
   const [authLoading, setAuthLoading]     = useState(true);
@@ -395,7 +474,8 @@ export default function App() {
   const [selectedGame, setSelectedGame]   = useState(null);
   const [selectedType, setSelectedType]   = useState(null);
   const [page, setPage]                   = useState('home');
-  const [adminLoggedIn, setAdminLoggedIn] = useState(false);
+  const [adminLoggedIn, setAdminLoggedIn] = useState(() => !!localStorage.getItem('mk_token') && localStorage.getItem('mk_admin_logged') === '1');
+  const [siteName, setSiteName]           = useState('SATTA KING');
   const [showNotices, setShowNotices]     = useState(false);
   const [noticesData, setNoticesData]     = useState([]);
 
@@ -409,8 +489,11 @@ export default function App() {
     if (!token) { setAuthLoading(false); return; }
     apiCall('/api/auth/profile')
       .then(res => {
-        if (res && res.success && res.user) setUser(res.user);
-        else localStorage.removeItem('mk_token');
+        if (res?.success && res?.user) {
+          setUser(prev => ({ ...prev, ...res.user }));
+        } else {
+          localStorage.removeItem('mk_token');
+        }
       })
       .catch(() => localStorage.removeItem('mk_token'))
       .finally(() => setAuthLoading(false));
@@ -418,115 +501,97 @@ export default function App() {
 
   const fetchWallet = useCallback(() => {
     if (!localStorage.getItem('mk_token')) return;
-    return apiCall('/api/wallet/balance')
-      .then(d => {
-        if (d && d.success) {
-          const walletBal  = Number(d.wallet_balance  || 0);
-          const winningBal = Number(d.winning_balance || 0);
-          const total = walletBal + winningBal;
-          walletRef.current = total;
-          setWallet(total);
-          return { walletBal, winningBal, total };
-        }
-        return null;
-      })
-      .catch(() => null);
+    return apiCall('/api/wallet/balance').then(d => {
+      if (d?.success) {
+        const total = Number(d.wallet_balance || 0) + Number(d.winning_balance || 0);
+        walletRef.current = total; setWallet(total);
+        return { total };
+      }
+      return null;
+    }).catch(() => null);
   }, []);
 
   useEffect(() => { if (user) fetchWallet(); }, [user, fetchWallet]);
+
+  useEffect(() => {
+    apiCall('/api/admin/settings')
+      .then(res => { if (res?.success && res?.settings?.site_name) setSiteName(res.settings.site_name); })
+      .catch(() => {});
+  }, [user]);
+
   useEffect(() => {
     if (!user) return;
     const interval = setInterval(fetchWallet, 30000);
     return () => clearInterval(interval);
   }, [user, fetchWallet]);
 
-  const handleLogin = (u) => { setUser(u); setWallet(0); walletRef.current = 0; };
-
-  const handleAdd = amt => {
-    fetchWallet();
-    setTxns(t => [{
-      id: Date.now(), type: 'credit', name: 'Add Funds',
-      date: new Date().toLocaleString('en-IN'),
-      ref: '#MK' + Math.random().toString(36).slice(2, 10).toUpperCase(),
-      amt, statusTxt: 'PENDING'
-    }, ...t]);
-    showToast(`Rs.${amt.toLocaleString()} added!`);
+  const handleLogin = u => {
+    setUser(u);
+    setWallet(0);
+    walletRef.current = 0;
+    setTimeout(() => {
+      apiCall('/api/auth/profile')
+        .then(res => { if (res?.success && res?.user) setUser(prev => ({ ...prev, ...res.user })); })
+        .catch(() => {});
+    }, 500);
   };
-
-  const handleWith = amt => {
-    fetchWallet();
-    setTxns(t => [{
-      id: Date.now(), type: 'debit', name: 'Withdrawal',
-      date: new Date().toLocaleString('en-IN'),
-      ref: '#WD' + Date.now().toString().slice(-10),
-      amt, statusTxt: 'PENDING'
-    }, ...t]);
-    showToast(`Withdrawal Rs.${amt.toLocaleString()} sent`);
-  };
+  const handleAdd  = amt => { fetchWallet(); showToast(`Rs.${amt.toLocaleString()} added!`); };
+  const handleWith = amt => { fetchWallet(); showToast(`Withdrawal Rs.${amt.toLocaleString()} sent`); };
 
   const handleBidSubmit = async (data) => {
-    if (bidSubmittingRef.current) {
-      showToast('Bid processing ho rahi hai... ruko!', 'err');
-      return;
-    }
+    if (bidSubmittingRef.current) { showToast('Bid processing ho rahi hai... ruko!', 'err'); return; }
     bidSubmittingRef.current = true;
     const amount = data.totalAmt || data.amount || 0;
-
     try {
       const fresh = await fetchWallet();
       const currentBalance = fresh ? fresh.total : walletRef.current;
-
       if (amount > currentBalance) {
         showToast(`Insufficient balance! Available: Rs.${currentBalance.toLocaleString()}`, 'err');
         bidSubmittingRef.current = false;
         return;
       }
 
-      if (data.numbers) {
-        const results = await Promise.all(
-          data.numbers.map(bet =>
-            apiCall('/api/games/bid', 'POST', {
-              game_id:   selectedGame.id,
-              game_type: selectedType.id,
-              number:    bet.num,
-              amount:    bet.amt,
-              session:   data.session || 'open'
-            })
-          )
-        );
-        const failed = results.find(r => !r.success);
-        if (failed) {
-          showToast(failed.message || 'Bid failed!', 'err');
-          await fetchWallet();
-          bidSubmittingRef.current = false;
-          return;
-        }
-      } else {
-        const res = await apiCall('/api/games/bid', 'POST', {
+      if (data.__bulk) {
+        const result = await apiCall('/api/games/bid/bulk', 'POST', {
           game_id:   selectedGame.id,
           game_type: selectedType.id,
-          number:    data.number,
-          amount:    data.amount,
-          session:   data.session || 'open'
+          session:   data.session,
+          bids:      data.numbers
         });
-        if (!res.success) {
-          showToast(res.message || 'Bid failed!', 'err');
+        if (result.success) {
+          showToast(`${result.bids_placed} bids placed! Rs.${result.total_amount} deducted.`);
           await fetchWallet();
-          bidSubmittingRef.current = false;
-          return;
+          const cat = selectedGame?.game_category;
+          const backPage = cat==='starline'?'starline':cat==='jackpot'?'jackpot':cat==='disawar'?'disawar':'home';
+          setPage(backPage); setSelectedGame(null); setSelectedType(null);
+        } else {
+          showToast(result.message || 'Bulk bid failed!', 'err');
+          await fetchWallet();
         }
+        bidSubmittingRef.current = false;
+        return;
       }
 
+      const res = await apiCall('/api/games/bid', 'POST', {
+        game_id:   selectedGame.id,
+        game_type: selectedType.id,
+        number:    data.number,
+        amount:    data.amount,
+        session:   data.session || 'open'
+      });
+      if (!res.success) {
+        showToast(res.message || 'Bid failed!', 'err');
+        await fetchWallet();
+        bidSubmittingRef.current = false;
+        return;
+      }
       await fetchWallet();
       showToast(`Bid Rs.${amount.toLocaleString()} placed!`);
-
       const cat = selectedGame?.game_category;
-      const backPage = cat === 'starline' ? 'starline' : cat === 'disawar' ? 'disawar' : 'home';
-      setPage(backPage);
-      setSelectedGame(null);
-      setSelectedType(null);
+      const backPage = cat==='starline'?'starline':cat==='jackpot'?'jackpot':cat==='disawar'?'disawar':'home';
+      setPage(backPage); setSelectedGame(null); setSelectedType(null);
 
-    } catch (err) {
+    } catch {
       await fetchWallet();
       showToast('Network error! Dobara try karo.', 'err');
     } finally {
@@ -534,13 +599,16 @@ export default function App() {
     }
   };
 
-  const navigate = (id) => {
+  const navigate = id => {
     setPage(id);
-    const validTabs = ['home', 'bids', 'disawar', 'wallet', 'profile', 'game'];
+    const validTabs = ['home','bids','disawar','jackpot','wallet','profile','game','txns','support','referral'];
     if (validTabs.includes(id)) setTab(id);
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
   };
 
-  const handleNav = (id) => {
+  const handleNav = id => {
     fetchWallet();
     if (id === 'add') setModal('add');
     else if (id === 'with') setModal('with');
@@ -549,29 +617,26 @@ export default function App() {
 
   const goBack = () => {
     const cat = selectedGame?.game_category;
-    if (page === 'bet-form') {
-      setPage('game-types');
-      setSelectedType(null);
-    } else if (page === 'game-types') {
-      if (cat === 'starline') { setPage('starline'); setSelectedGame(null); }
-      else if (cat === 'disawar') { setPage('disawar'); setSelectedGame(null); }
+    if (page === 'bet-form') { setPage('game-types'); setSelectedType(null); }
+    else if (page === 'game-types') {
+      if (cat==='starline') { setPage('starline'); setSelectedGame(null); }
+      else if (cat==='jackpot') { setPage('jackpot'); setSelectedGame(null); }
+      else if (cat==='disawar') { setPage('disawar'); setSelectedGame(null); }
       else { setPage('home'); setSelectedGame(null); setTab('game'); }
-    } else {
-      setPage('home'); setTab('game');
-    }
+    } else { setPage('home'); setTab('game'); }
   };
 
   if (isAdmin) {
-    if (!adminLoggedIn) return <AdminLogin onLogin={() => setAdminLoggedIn(true)} />;
+    if (!adminLoggedIn) return <AdminLogin onLogin={() => { localStorage.setItem('mk_admin_logged', '1'); setAdminLoggedIn(true); }} />;
     return <AdminPanel onLogout={() => setAdminLoggedIn(false)} />;
   }
 
+  if (!language) return <LanguageScreen onSelect={handleLanguageSelect} />;
+
   if (authLoading) {
     return (
-      <div style={{ height:'100vh', display:'flex', justifyContent:'center', alignItems:'center',
-        background:'#021f1b', color:'#00ffd5', fontSize:18, fontWeight:700,
-        fontFamily:'Poppins, sans-serif' }}>
-        Loading MatkaKing...
+      <div style={{ height:'100vh', display:'flex', justifyContent:'center', alignItems:'center', background:'#021a14', color:'#00ffd5', fontSize:18, fontWeight:700 }}>
+        Loading...
       </div>
     );
   }
@@ -579,186 +644,138 @@ export default function App() {
   if (!user) return <AuthScreen onLogin={handleLogin} />;
 
   const isTxnTab  = page === 'txns';
-  const isSubPage = ['game-types', 'bet-form', 'starline', 'disawar'].includes(page);
-
-  const navTitle =
-    page === 'game-types' ? selectedGame?.name :
-    page === 'bet-form'   ? selectedType?.label :
-    page === 'starline'   ? 'STARLINE' :
-    page === 'disawar'    ? 'DISAWAR' :
-    null;
+  const isSubPage = ['game-types','bet-form','starline','disawar','jackpot'].includes(page);
+  const navTitle  = page==='game-types' ? selectedGame?.name : page==='bet-form' ? selectedType?.label : page==='starline' ? 'Matka Starline' : page==='jackpot' ? 'KING JACKPOT' : page==='disawar' ? 'DISAWAR' : null;
 
   return (
-    <div style={{ background: '#021a14', minHeight: '100vh', color: '#fff', fontFamily: "'Poppins', sans-serif" }}>
-      
+    <>
       <style>{`
-        @keyframes borderMove { 0% { background-position: 0% } 100% { background-position: 300% } }
-        @keyframes wave { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-        @keyframes shineMove { 0% { left: -100%; } 100% { left: 100%; } }
-        @keyframes spinIcon { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
+        .topnav { background: linear-gradient(135deg, #021a14, #063d35) !important; border-bottom: 1px solid rgba(0,255,213,0.1) !important; box-shadow: 0 2px 12px rgba(0,255,213,0.08) !important; }
+        .brand { color: #fff !important; text-shadow: 0 1px 6px rgba(0,255,213,0.15) !important; font-family: 'Baloo 2','Nunito',sans-serif !important; letter-spacing: 2px !important; }
+        .back-btn { color: #fff !important; }
+        .hamburger span { background: #00ffd5 !important; }
+        .tn-wallet { background: rgba(0,255,213,0.1) !important; border: 1.5px solid rgba(0,255,213,0.25) !important; border-radius: 20px !important; }
+        .tn-wallet span { color: #00ffd5 !important; }
+        .tn-bell { background: rgba(0,255,213,0.1) !important; border: 1.5px solid rgba(0,255,213,0.2) !important; }
+        .bell-dot { background: #ff1744 !important; }
+        .botnav { background: #0a2e26 !important; border-top: 1px solid rgba(0,255,213,0.1) !important; box-shadow: 0 -4px 16px rgba(0,255,213,0.06) !important; }
+        .bn-item svg { color: rgba(0,255,213,0.4); }
+        .bn-item span:last-child { color: rgba(255,255,255,0.4) !important; font-size: 10px !important; font-weight: 600 !important; font-family: sans-serif !important; letter-spacing: 0 !important; }
+        .bn-item.active svg { color: #00ffd5 !important; }
+        .bn-item.active span:last-child { color: #00ffd5 !important; font-weight: 700 !important; }
+        .bn-item:hover { background: rgba(0,255,213,0.06) !important; }
+        .bn-item:hover svg { color: #00ffd5 !important; }
+        .home-circle { background: linear-gradient(90deg, #14f4ce, #e0800b) !important; box-shadow: 0 4px 16px rgba(0,255,213,0.35) !important; border: 3px solid #0a2e26 !important; }
+        .notif-modal-header { background: linear-gradient(135deg, #021a14, #063d35) !important; }
+        input::placeholder { color: rgba(255,255,255,0.3) !important; }
+        option { background: #0a2e26; color: #fff; }
       `}</style>
 
       {/* TOP NAV */}
-      <div className="topnav" style={{ background: 'rgba(2, 31, 27, 0.95)', borderBottom: '1.5px solid rgba(0, 255, 213, 0.3)', padding: '0 14px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100, backdropFilter: 'blur(10px)', boxShadow: '0 2px 20px rgba(0,255,213,0.2)' }}>
-        <div className="tn-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {isSubPage && (
-            <div className="back-btn" onClick={goBack} style={{ color: '#00ffd5', fontSize: '20px', cursor: 'pointer', padding: '4px 6px 4px 0', lineHeight: 1, transition: 'transform 0.2s' }}>&#x2039;</div>
-          )}
-          <span className="brand" style={{ fontFamily: "'Teko', sans-serif", fontSize: '20px', fontWeight: 700, color: '#FFD700', letterSpacing: '3px', textShadow: '0 0 16px rgba(255,215,0,0.5), 0 0 32px rgba(255,165,0,0.2)', textTransform: 'uppercase' }}>
-            {isSubPage ? (navTitle || 'KHAJANA') : <>SATKA MATKA <em></em></>}
-          </span>
+      <div className="topnav">
+        <div className="tn-left">
+          {isSubPage
+            ? <div className="back-btn" onClick={goBack} style={{ color:'#fff', fontSize:26, cursor:'pointer', padding:'4px 8px 4px 0' }}>‹</div>
+            : <div className="hamburger" onClick={() => setDrawer(true)}><span/><span/><span/></div>
+          }
+          <span className="brand">{isSubPage ? (navTitle || 'BACK') : siteName}</span>
         </div>
-        <div className="tn-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {isTxnTab && <div className="tn-filter show" style={{ background: 'rgba(0, 255, 200, 0.05)', border: '1.5px solid rgba(0, 255, 213, 0.3)', borderRadius: '6px', padding: '5px 10px', color: '#00ffd5', fontSize: '11px', fontWeight: 700, cursor: 'pointer', letterSpacing: '1px' }}>Filter</div>}
+        <div className="tn-right">
           {!isTxnTab && (
-            <div className="tn-wallet" onClick={() => { fetchWallet(); setPage('wallet'); setTab('wallet'); }} style={{ background: 'rgba(0, 255, 200, 0.05)', border: '1.5px solid rgba(0, 255, 213, 0.3)', borderRadius: '20px', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s' }}>
-              <span style={{ color: '#00ffd5', fontSize: '14px', fontWeight: 700, fontFamily: "'Teko', sans-serif", letterSpacing: '1px' }}>&#x1F4BC;</span>
-              <span style={{ color: '#00ffd5', fontSize: '14px', fontWeight: 700, fontFamily: "'Teko', sans-serif", letterSpacing: '1px' }}>Rs.{wallet.toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 })}</span>
+            <div className="tn-wallet" onClick={() => { fetchWallet(); setPage('wallet'); setTab('wallet'); }}>
+              <span>💼</span>
+              <span>Rs.{wallet.toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 })}</span>
             </div>
           )}
-          <div className="tn-bell" style={{ cursor:'pointer', width: '32px', height: '32px', background: 'rgba(0, 255, 200, 0.05)', border: '1.5px solid rgba(0, 255, 213, 0.3)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', position: 'relative', transition: 'all 0.2s', color: '#00ffd5' }} onClick={() => {
+          <div className="tn-bell" style={{ cursor:'pointer' }} onClick={() => {
             apiCall('/api/notices').then(res => {
-              if (res && res.success) setNoticesData(res.notices || []);
+              if (res?.success) setNoticesData(res.notices || []);
               setShowNotices(true);
             }).catch(() => setShowNotices(true));
           }}>
-            &#x1F514;<div className="bell-dot" style={{ position: 'absolute', top: '2px', right: '2px', width: '8px', height: '8px', background: '#ff2244', borderRadius: '50%' }}/>
+            🔔<div className="bell-dot"/>
           </div>
         </div>
       </div>
 
       {/* PAGES */}
-      {page === 'home' && (
-        <HomeScreen
-          wallet={wallet}
-          onAdd={() => setModal('add')}
-          onWith={() => setModal('with')}
-          onPlay={g => { setSelectedGame(g); setPage('game-types'); setTab('game'); }}
-          navigate={navigate}
-        />
-      )}
-      
-      {/* PROFILE & SUPPORT SCREEN */}
-      {page === 'profile' && (
-        <ProfileScreen 
-          user={user} 
-          showToast={showToast} 
-          navigate={navigate}
-          onLogout={() => {
-            localStorage.removeItem('mk_token');
-            setUser(null); setWallet(0); walletRef.current = 0;
-          }}
-        />
-      )}
-
-      {page === 'game-types' && (
-        <GameTypePage
-          game={selectedGame}
-          onSelect={gt => { setSelectedType(gt); setPage('bet-form'); }}
-        />
-      )}
-
-      {page === 'bet-form' && (
-        <BetForm
-          game={selectedGame}
-          gameType={selectedType}
-          wallet={wallet}
-          onSubmit={handleBidSubmit}
-        />
-      )}
-
-      {/* STARLINE */}
-      {page === 'starline' && (
-        <CategoryGamesScreen
-          category="starline"
-          onPlay={g => { setSelectedGame(g); setPage('game-types'); }}
-        />
-      )}
-
-      {/* DISAWAR */}
-      {page === 'disawar' && (
-        <CategoryGamesScreen
-          category="disawar"
-          onPlay={g => { setSelectedGame(g); setPage('game-types'); }}
-        />
-      )}
-
-      {page === 'bids'    && <BidsPage apiCall={apiCall}/>}
-      {page === 'txns'    && <TxnsPage apiCall={apiCall} navigate={navigate}/>}
-      {page === 'wallet'  && <WalletPage wallet={wallet} onAdd={() => setModal('add')} onWith={() => setModal('with')} user={user} navigate={navigate} apiCall={apiCall}/>}
-      {page === 'support' && <SupportPage apiCall={apiCall} user={user} />}
-      {page === 'htp'     && <HowToPlayPage onBack={() => setPage('home')} />}
-      {page === 'faq'     && <FAQPage onBack={() => setPage('home')} />}
-      {page === 'terms'   && <TermsPage onBack={() => setPage('home')} />}
-      {page === 'privacy' && <PrivacyPage onBack={() => setPage('home')} />}
+      {page === 'home'       && <HomeScreen wallet={wallet} onAdd={() => setModal('add')} onWith={() => setModal('with')} onPlay={g => { 
+    setSelectedGame(g); 
+    setPage('game-types'); 
+    setTab('game');
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+  }} navigate={navigate} apiCall={apiCall} />}
+      {page === 'profile'    && <ProfileScreen user={user} showToast={showToast} />}
+      {page === 'game-types' && <GameTypePage game={selectedGame} onSelect={gt => { setSelectedType(gt); setPage('bet-form'); }} />}
+      {page === 'bet-form'   && <BetForm game={selectedGame} gameType={selectedType} wallet={wallet} onSubmit={handleBidSubmit} />}
+      {page === 'starline'   && <CategoryGamesScreen category="starline" onPlay={g => { setSelectedGame(g); setPage('game-types'); }} />}
+      {page === 'jackpot'    && <CategoryGamesScreen category="jackpot" apiCategory="disawar" onPlay={g => { setSelectedGame(g); setPage('game-types'); }} />}
+      {page === 'disawar'    && <CategoryGamesScreen category="disawar" onPlay={g => { setSelectedGame(g); setPage('game-types'); }} />}
+      {page === 'bids'       && <BidsPage apiCall={apiCall}/>}
+      {page === 'txns'       && <TxnsPage apiCall={apiCall} navigate={navigate}/>}
+      {page === 'wallet' && <WalletPage wallet={wallet} onAdd={null} onWith={() => setModal('with')} user={user} navigate={navigate} apiCall={apiCall}/>}
+      {page === 'support'    && <SupportPage apiCall={apiCall} user={user} />}
+      {page === 'htp'        && <HowToPlayPage onBack={() => setPage('home')} />}
+      {page === 'faq'        && <FAQPage onBack={() => setPage('home')} />}
+      {page === 'terms'      && <TermsPage onBack={() => setPage('home')} />}
+      {page === 'privacy'    && <PrivacyPage onBack={() => setPage('home')} />}
+      {page === 'gamerates'  && <GameRatesPage onBack={() => setPage('home')} />}
+      {page === 'referral'   && <ReferralPage apiCall={apiCall} user={user} onBack={() => setPage('wallet')} />}
 
       {/* BOTTOM NAV */}
       {!isSubPage && (
-        <div className="botnav" style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '430px', background: 'rgba(2, 31, 27, 0.98)', borderTop: '1.5px solid rgba(0, 255, 213, 0.3)', display: 'flex', zIndex: 100, boxShadow: '0 -4px 20px rgba(0,255,213,0.15)' }}>
-          <div className="bn-item" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px 6px', cursor: 'pointer', gap: '2px', transition: 'all 0.2s' }} onClick={() => navigate('bids')}>
-            <span className="ni" style={{ fontSize: '19px', color: tab === 'bids' ? '#00ffd5' : 'rgba(0, 255, 213, 0.55)', textShadow: tab === 'bids' ? '0 0 10px #00ffd5' : 'none' }}>&#x1F528;</span>
-            <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '1px', fontFamily: "'Poppins', sans-serif", color: tab === 'bids' ? '#00ffd5' : 'rgba(0, 255, 213, 0.55)', textShadow: tab === 'bids' ? '0 0 10px #00ffd5' : 'none' }}>My Bids</span>
+        <div className="botnav">
+          <div className={`bn-item${tab==='txns'?' active':''}`} onClick={() => navigate('txns')}>
+            <IconTransaction color={tab==='txns' ? '#00ffd5' : 'rgba(0,255,213,0.4)'} />
+            <span>Transaction</span>
           </div>
-          <div className="bn-item" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px 6px', cursor: 'pointer', gap: '2px', transition: 'all 0.2s' }} onClick={() => navigate('disawar')}>
-            <span className="ni" style={{ fontSize: '19px', color: tab === 'disawar' ? '#00ffd5' : 'rgba(0, 255, 213, 0.55)', textShadow: tab === 'disawar' ? '0 0 10px #00ffd5' : 'none' }}>&#x1F3B0;</span>
-            <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '1px', fontFamily: "'Poppins', sans-serif", color: tab === 'disawar' ? '#00ffd5' : 'rgba(0, 255, 213, 0.55)', textShadow: tab === 'disawar' ? '0 0 10px #00ffd5' : 'none' }}>Disawar</span>
+          <div className={`bn-item${tab==='bids'?' active':''}`} onClick={() => navigate('bids')}>
+            <IconBids color={tab==='bids' ? '#00ffd5' : 'rgba(0,255,213,0.4)'} />
+            <span>My Bids</span>
           </div>
-          
-          {/* BEECH WALA BUTTON - GAME LIST KHOLEGA (🎮) */}
-          <div className="bn-center" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', padding: '2px 4px 6px' }} onClick={() => { setPage('home'); setTab('game'); setSelectedGame(null); setSelectedType(null); }}>
-            <div className="home-circle" style={{ width: '50px', height: '50px', borderRadius: '50%', marginTop: '-16px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(90deg, #14f4ce, #e0800b)', boxShadow: '0 0 10px #00ffd5, 0 0 25px #00aaff', transition: 'transform 0.2s, box-shadow 0.2s' }}>
-              <span className="ni" style={{ fontSize: '24px', color: '#001a17' }}>🎮</span>
-            </div>
-            <span style={{ fontSize: '11px', color: tab === 'game' ? '#00ffd5' : 'rgba(0, 255, 213, 0.55)', marginTop: '2px', fontFamily: "'Poppins', sans-serif", letterSpacing: '1px', fontWeight: 'bold' }}>Game</span>
+          <div className="bn-center" onClick={() => { setPage('home'); setTab('home'); setSelectedGame(null); setSelectedType(null); }}>
+            <div className="home-circle"><IconHome size={26} color="#001a17" /></div>
+            <span style={{ color:tab==='home'?'#00ffd5':'rgba(255,255,255,0.4)', fontSize:10, fontWeight:tab==='home'?700:600, marginTop:2 }}>Home</span>
           </div>
-
-          <div className="bn-item" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px 6px', cursor: 'pointer', gap: '2px', transition: 'all 0.2s' }} onClick={() => navigate('wallet')}>
-            <span className="ni" style={{ fontSize: '19px', color: tab === 'wallet' ? '#00ffd5' : 'rgba(0, 255, 213, 0.55)', textShadow: tab === 'wallet' ? '0 0 10px #00ffd5' : 'none' }}>&#x1F3E6;</span>
-            <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '1px', fontFamily: "'Poppins', sans-serif", color: tab === 'wallet' ? '#00ffd5' : 'rgba(0, 255, 213, 0.55)', textShadow: tab === 'wallet' ? '0 0 10px #00ffd5' : 'none' }}>Wallet</span>
+          <div className={`bn-item${tab==='wallet'?' active':''}`} onClick={() => navigate('wallet')}>
+            <IconWallet color={tab==='wallet' ? '#00ffd5' : 'rgba(0,255,213,0.4)'} />
+            <span>Funds</span>
           </div>
-
-          {/* RIGHT BUTTON - PROFILE AUR SUPPORT KHOLEGA (🏠) */}
-          <div className="bn-item" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px 6px', cursor: 'pointer', gap: '2px', transition: 'all 0.2s' }} onClick={() => { setPage('profile'); setTab('profile'); }}>
-            <span className="ni" style={{ fontSize: '19px', color: tab === 'profile' ? '#00ffd5' : 'rgba(0, 255, 213, 0.55)', textShadow: tab === 'profile' ? '0 0 10px #00ffd5' : 'none' }}>&#x1F3E0;</span>
-            <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '1px', fontFamily: "'Poppins', sans-serif", color: tab === 'profile' ? '#00ffd5' : 'rgba(0, 255, 213, 0.55)', textShadow: tab === 'profile' ? '0 0 10px #00ffd5' : 'none' }}>Home</span>
+          <div className={`bn-item${tab==='support'?' active':''}`} onClick={() => { setPage('support'); setTab('support'); }}>
+            <IconSupport color={tab==='support' ? '#00ffd5' : 'rgba(0,255,213,0.4)'} />
+            <span>Support</span>
           </div>
         </div>
       )}
 
-      {modal === 'add'  && <AddModal onClose={() => setModal(null)} onSuccess={handleAdd}/>}
+      {/* DRAWER */}
+      {drawer && (
+        <BlueDrawer user={user} wallet={wallet} onClose={() => setDrawer(false)} onNav={handleNav}
+          onLogout={() => { localStorage.removeItem('mk_token'); setUser(null); setWallet(0); walletRef.current=0; setDrawer(false); }}
+        />
+      )}
+
+      {modal === 'add' && <DepositModal apiCall={apiCall} onClose={() => { setModal(null); fetchWallet(); }} onSuccess={() => { fetchWallet(); }} />}
       {modal === 'with' && <WithdrawModal wallet={wallet} onClose={() => setModal(null)} onSuccess={handleWith}/>}
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)}/>}
 
       {/* NOTIFICATIONS */}
       {showNotices && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:9999,
-          display:'flex', alignItems:'center', justifyContent:'center', backdropFilter: 'blur(4px)' }}
+        <div style={{ position:'fixed', inset:0, background:'rgba(2,20,15,0.8)', backdropFilter:'blur(4px)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center' }}
           onClick={() => setShowNotices(false)}>
-          <div style={{ background:'linear-gradient(145deg, #063d35, #021f1b)', width:'90%', maxWidth:350, borderRadius:16,
-            overflow:'hidden', border:'1px solid rgba(0, 255, 213, 0.3)', position: 'relative', boxShadow: '0 4px 15px rgba(0,0,0,0.4)' }}
+          <div style={{ background:'#0a2e26', width:'90%', maxWidth:350, borderRadius:16, overflow:'hidden', boxShadow:'0 0 30px rgba(0,255,213,0.1)', border:'1px solid rgba(0,255,213,0.15)' }}
             onClick={e => e.stopPropagation()}>
-            <div style={{
-              position: 'absolute', inset: 0, padding: 2, borderRadius: 16,
-              background: 'linear-gradient(90deg, transparent, #00ffd5, transparent)',
-              backgroundSize: '300% 300%', animation: 'borderMove 4s linear infinite',
-              WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-              WebkitMaskComposite: 'xor', maskComposite: 'exclude', pointerEvents: 'none'
-            }}></div>
-            <div style={{ background:'rgba(0, 255, 200, 0.05)', color:'#00ffd5', padding:'12px 16px',
-              fontWeight:700, display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom: '1px solid rgba(0, 255, 213, 0.3)' }}>
-              <span style={{ fontSize:16, fontFamily: "'Poppins', sans-serif", letterSpacing: 1, textTransform: 'uppercase' }}>Notifications</span>
-              <span onClick={() => setShowNotices(false)} style={{ cursor:'pointer', fontSize:20, lineHeight:1, color: '#00ffd5' }}>X</span>
+            <div className="notif-modal-header" style={{ color:'#fff', padding:'14px 16px', fontWeight:700, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontSize:16 }}>🔔 Notifications</span>
+              <span onClick={() => setShowNotices(false)} style={{ cursor:'pointer', fontSize:20, color:'#00ffd5' }}>✕</span>
             </div>
             <div style={{ padding:16, maxHeight:'60vh', overflowY:'auto' }}>
               {noticesData.length === 0 ? (
-                <div style={{ color:'rgba(0, 255, 213, 0.65)', textAlign:'center', padding:'30px 20px', fontSize:14, fontFamily: "'Poppins', sans-serif" }}>
-                  Abhi koi naya notification nahi hai.
-                </div>
+                <div style={{ color:'rgba(255,255,255,0.4)', textAlign:'center', padding:'30px 20px', fontSize:14 }}>Abhi koi naya notification nahi hai.</div>
               ) : (
                 noticesData.map((n, i) => (
-                  <div key={n.id || i} style={{ background:'rgba(0, 255, 200, 0.05)', padding:12, borderRadius:8,
-                    marginBottom:10, color:'#fff', fontSize:13,
-                    borderLeft:'4px solid #00ffd5', lineHeight:1.5, fontFamily: "'Poppins', sans-serif" }}>
+                  <div key={n.id || i} style={{ background:'rgba(0,255,213,0.06)', padding:12, borderRadius:8, marginBottom:10, color:'#fff', fontSize:13, borderLeft:'4px solid #00ffd5', lineHeight:1.5 }}>
                     {n.message}
                   </div>
                 ))
@@ -767,6 +784,6 @@ export default function App() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
