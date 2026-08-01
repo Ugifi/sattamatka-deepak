@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 // ── DARK NEON THEME SHARED STYLES ──
 const B = {
@@ -59,7 +59,6 @@ function SuccessPopup({ onClose }) {
         boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
         position: 'relative',
       }}>
-        {/* Close button */}
         <div onClick={onClose} style={{
           position: 'absolute', top: 14, right: 14,
           width: 32, height: 32,
@@ -68,7 +67,6 @@ function SuccessPopup({ onClose }) {
           cursor: 'pointer', fontSize: 16, color: '#00ffd5', fontWeight: 700,
         }}>✕</div>
 
-        {/* Green circle */}
         <div style={{
           width: 80, height: 80,
           background: 'linear-gradient(135deg,#00cc44,#00e676)',
@@ -80,14 +78,13 @@ function SuccessPopup({ onClose }) {
         }}>✅</div>
 
         <div style={{ fontSize: 22, fontWeight: 900, color: '#FFD700', marginBottom: 10, fontFamily: "'Poppins', sans-serif" }}>
-          Request Submit Ho Gayi!
+          Request Submitted!
         </div>
         <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', fontWeight: 600, lineHeight: 1.7, marginBottom: 24 }}>
-          Aapki deposit request successfully<br />submit ho gayi hai.<br />
-          <span style={{ color: '#00ffd5', fontWeight: 800 }}>10-30 Minutes</span> mein wallet mein<br />add ho jaayega. ✨
+          Your deposit request has been successfully submitted.<br />
+          Wallet will be credited within <span style={{ color: '#00ffd5', fontWeight: 800 }}>10–30 Minutes</span>. ✨
         </div>
 
-        {/* Progress bar */}
         <div style={{ background: 'rgba(0,255,213,0.1)', borderRadius: 20, height: 6, overflow: 'hidden', marginBottom: 10 }}>
           <div style={{
             height: '100%',
@@ -110,7 +107,7 @@ function SuccessPopup({ onClose }) {
           boxShadow: '0 0 10px rgba(0,255,213,0.3)',
           fontFamily: "'Teko', sans-serif", letterSpacing: 1, textTransform: 'uppercase'
         }}>
-          ✕ &nbsp; Close Karo
+          ✕ &nbsp; Close
         </button>
       </div>
     </div>
@@ -129,6 +126,12 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
   const [msg, setMsg] = useState({ type: '', text: '' });
   const [upiCopied, setUpiCopied] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // Screenshot state
+  const [screenshot, setScreenshot] = useState(null);       // File object
+  const [screenshotPreview, setScreenshotPreview] = useState(''); // base64 preview
+  const [screenshotBase64, setScreenshotBase64] = useState('');   // base64 for WhatsApp/API
+  const fileInputRef = useRef(null);
 
   const presets = [100, 200, 500, 1000, 2000, 5000];
 
@@ -161,10 +164,39 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
     }).catch(() => {});
   }, [apiCall]);
 
+  // Handle screenshot file selection
+  const handleScreenshotChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setMsg({ type: 'err', text: '❌ Only image files allowed (JPG, PNG, etc.)' });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setMsg({ type: 'err', text: '❌ Image size must be under 5MB' });
+      return;
+    }
+    setScreenshot(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setScreenshotPreview(ev.target.result);
+      setScreenshotBase64(ev.target.result); // full data URL
+    };
+    reader.readAsDataURL(file);
+    setMsg({ type: '', text: '' });
+  };
+
+  const removeScreenshot = () => {
+    setScreenshot(null);
+    setScreenshotPreview('');
+    setScreenshotBase64('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleNext = () => {
     const amt = parseFloat(amount);
-    if (!amt || amt < 100) { setMsg({ type: 'err', text: '❌ Minimum deposit ₹100 hai' }); return; }
-    if (amt > 100000)      { setMsg({ type: 'err', text: '❌ Maximum deposit ₹1,00,000 hai' }); return; }
+    if (!amt || amt < 100) { setMsg({ type: 'err', text: '❌ Minimum deposit is ₹100' }); return; }
+    if (amt > 100000)      { setMsg({ type: 'err', text: '❌ Maximum deposit is ₹1,00,000' }); return; }
     setMsg({ type: '', text: '' });
     setStep(2);
   };
@@ -177,35 +209,51 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
     });
   };
 
-  const openWhatsApp = () => {
+  // Send WhatsApp message with all details
+  const sendWhatsApp = (utrValue) => {
     const num = whatsapp.replace(/\D/g, '');
     const msg91 = `91${num}`;
+    const screenshotNote = screenshot ? `\n📸 Screenshot: Attached separately` : '';
     const text = encodeURIComponent(
-      `💰 *Deposit Request*\n\nAmount: ₹${amount}\nUTR/Transaction ID: ${utr || 'XXXXXXXX'}\n\nKripya jaldi approve karein 🙏`
+      `💰 *Deposit Request — MatkaKing*\n\n` +
+      `Amount: ₹${parseFloat(amount).toLocaleString('en-IN')}\n` +
+      `UTR/Transaction ID: ${utrValue || utr || 'Not provided'}\n` +
+      `UPI ID Paid To: ${upiId || 'N/A'}\n` +
+      `Date & Time: ${new Date().toLocaleString('en-IN')}` +
+      screenshotNote +
+      `\n\nPlease approve quickly 🙏`
     );
     window.open(`https://wa.me/${msg91}?text=${text}`, '_blank');
   };
 
   const handleSubmitUTR = async () => {
     if (!utr || utr.trim().length < 6) {
-      setMsg({ type: 'err', text: '❌ Valid Transaction Number / UTR daalo' });
+      setMsg({ type: 'err', text: '❌ Enter a valid Transaction Number / UTR' });
       return;
     }
     setLoading(true); setMsg({ type: '', text: '' });
     try {
-      const res = await apiCall('/api/wallet/deposit', 'POST', {
+      const payload = {
         amount: parseFloat(amount),
         utr: utr.trim(),
-        payment_method: 'upi'
-      });
+        payment_method: 'upi',
+      };
+      // Attach screenshot as base64 if available
+      if (screenshotBase64) {
+        payload.screenshot = screenshotBase64;
+      }
+
+      const res = await apiCall('/api/wallet/deposit', 'POST', payload);
       if (res?.success) {
         onSuccess && onSuccess();
+        // Auto-send WhatsApp with all details after successful submit
+        sendWhatsApp(utr.trim());
         setShowSuccess(true);
       } else {
-        setMsg({ type: 'err', text: res?.message || '❌ Request submit nahi hui' });
+        setMsg({ type: 'err', text: res?.message || '❌ Request could not be submitted' });
       }
     } catch {
-      setMsg({ type: 'err', text: '❌ Server se connect nahi ho pa raha' });
+      setMsg({ type: 'err', text: '❌ Unable to connect to server' });
     } finally {
       setLoading(false);
     }
@@ -252,7 +300,7 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
                 {step === 1 ? '💰 Add Money' : `📱 Pay ₹${parseFloat(amount).toLocaleString('en-IN')}`}
               </div>
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2, fontWeight: 600 }}>
-                {step === 1 ? 'Select ya type karo amount' : 'UPI se payment karo'}
+                {step === 1 ? 'Select or enter amount' : 'Pay via UPI'}
               </div>
             </div>
             <div onClick={onClose} style={{ width: 36, height: 36, background: 'rgba(0,255,213,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 18, color: '#00ffd5', fontWeight: 700 }}>✕</div>
@@ -327,7 +375,7 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
                   <div style={{ background: '#fff', border: '2px solid rgba(0,255,213,0.3)', borderRadius: 22, display: 'inline-block', padding: 16, boxShadow: '0 0 20px rgba(0,255,213,0.15)' }}>
                     <img src={qrUrl} alt="UPI QR" style={{ width: 210, height: 210, display: 'block' }} />
                   </div>
-                  <div style={{ marginTop: 10, fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>📷 Scan karo → Pay karo</div>
+                  <div style={{ marginTop: 10, fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>📷 Scan & Pay</div>
                 </div>
               )}
 
@@ -350,11 +398,11 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
               <div style={{ background: 'rgba(0,255,213,0.05)', borderRadius: 16, padding: '16px 18px', marginBottom: 20, border: '1px solid rgba(0,255,213,0.15)' }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: '#00ffd5', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 14, fontFamily: "'Teko', sans-serif" }}>📋 Payment Steps</div>
                 {[
-                  { n: '1', t: 'QR scan karo ya UPI ID copy karo' },
-                  { n: '2', t: `₹${parseFloat(amount).toLocaleString('en-IN')} pay karo apne UPI app se` },
-                  { n: '3', t: 'Transaction Number / UTR note karo' },
-                  { n: '4', t: 'Neeche UTR daalo aur submit karo' },
-                  { n: '5', t: 'WhatsApp par admin ko screenshot bhejo', highlight: true },
+                  { n: '1', t: 'Scan QR or copy UPI ID' },
+                  { n: '2', t: `Pay ₹${parseFloat(amount).toLocaleString('en-IN')} from your UPI app` },
+                  { n: '3', t: 'Note the Transaction Number / UTR' },
+                  { n: '4', t: 'Upload screenshot & enter UTR below' },
+                  { n: '5', t: 'Submit — WhatsApp notification sent automatically', highlight: true },
                 ].map((s, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: i < 4 ? 12 : 0, padding: s.highlight ? '10px 12px' : '0', background: s.highlight ? 'rgba(37,211,102,0.1)' : 'transparent', borderRadius: s.highlight ? 12 : 0, border: s.highlight ? '1px solid rgba(37,211,102,0.3)' : 'none' }}>
                     <div style={{ width: 26, height: 26, background: s.highlight ? 'linear-gradient(135deg,#25D366,#128C7E)' : 'linear-gradient(135deg,#14f4ce,#e0800b)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#001a17', fontWeight: 900, fontSize: 12, flexShrink: 0 }}>{s.n}</div>
@@ -363,12 +411,57 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
                 ))}
               </div>
 
-              <button onClick={openWhatsApp}
-                style={{ width: '100%', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', border: 'none', borderRadius: '10px 40px 10px 40px', padding: '16px', fontSize: 15, fontWeight: 900, cursor: 'pointer', letterSpacing: 0.5, boxShadow: '0 0 15px rgba(37,211,102,0.3)', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                <span style={{ fontSize: 20 }}>💬</span>
-                WHATSAPP PAR ADMIN KO BHEJO
-              </button>
+              {/* ── SCREENSHOT UPLOAD ── */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#00ffd5', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10, fontFamily: "'Teko', sans-serif" }}>📸 Payment Screenshot</div>
 
+                {!screenshotPreview ? (
+                  <div
+                    onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                    style={{ background: 'rgba(0,255,200,0.04)', border: '2px dashed rgba(0,255,213,0.3)', borderRadius: 16, padding: '28px 20px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,255,200,0.08)'; e.currentTarget.style.borderColor = 'rgba(0,255,213,0.6)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,255,200,0.04)'; e.currentTarget.style.borderColor = 'rgba(0,255,213,0.3)'; }}
+                  >
+                    <div style={{ fontSize: 36, marginBottom: 10 }}>📸</div>
+                    <div style={{ color: '#00ffd5', fontWeight: 800, fontSize: 15, marginBottom: 6 }}>Upload Payment Screenshot</div>
+                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 600 }}>Tap to select image (JPG, PNG · Max 5MB)</div>
+                    <div style={{ marginTop: 14, display: 'inline-block', background: 'linear-gradient(90deg, #14f4ce, #e0800b)', color: '#001a17', fontWeight: 800, fontSize: 13, padding: '10px 24px', borderRadius: '8px 30px 8px 30px', letterSpacing: 0.5 }}>
+                      Choose File
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', border: '2px solid rgba(0,255,213,0.3)', boxShadow: '0 0 15px rgba(0,255,213,0.1)' }}>
+                    <img src={screenshotPreview} alt="Payment screenshot" style={{ width: '100%', maxHeight: 260, objectFit: 'contain', background: '#000', display: 'block' }} />
+                    <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                        style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(0,255,213,0.4)', borderRadius: 8, padding: '6px 12px', color: '#00ffd5', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+                        🔄 Change
+                      </button>
+                      <button
+                        onClick={removeScreenshot}
+                        style={{ background: 'rgba(255,34,68,0.2)', border: '1px solid rgba(255,34,68,0.4)', borderRadius: 8, padding: '6px 12px', color: '#ff2244', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+                        ✕ Remove
+                      </button>
+                    </div>
+                    <div style={{ padding: '10px 14px', background: 'rgba(0,204,68,0.1)', borderTop: '1px solid rgba(0,204,68,0.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 16 }}>✅</span>
+                      <span style={{ color: '#00cc44', fontWeight: 800, fontSize: 13 }}>Screenshot attached</span>
+                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginLeft: 'auto' }}>{screenshot?.name}</span>
+                    </div>
+                  </div>
+                )}
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleScreenshotChange}
+                />
+              </div>
+
+              {/* UTR Input */}
               <div style={{ fontSize: 11, fontWeight: 800, color: '#00ffd5', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8, fontFamily: "'Teko', sans-serif" }}>Transaction Number / UTR *</div>
               <input
                 style={{ width: '100%', background: 'rgba(0,255,200,0.06)', border: '1.5px solid rgba(0,255,213,0.25)', borderRadius: 14, padding: '15px 16px', color: '#fff', fontSize: 15, fontWeight: 700, outline: 'none', marginBottom: 16, boxSizing: 'border-box', fontFamily: 'inherit' }}
@@ -377,9 +470,9 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
               />
 
               <div style={{ background: 'rgba(0,255,213,0.05)', borderRadius: 12, padding: '12px 14px', marginBottom: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ fontSize: 12, color: '#00cc44', fontWeight: 700 }}>✅ Pay karke UTR daalo aur submit karo</div>
+                <div style={{ fontSize: 12, color: '#00cc44', fontWeight: 700 }}>✅ Pay, then enter UTR & submit</div>
                 <div style={{ fontSize: 12, color: '#ff2244', fontWeight: 700 }}>⏰ Approval: 0–5 hours</div>
-                <div style={{ fontSize: 12, color: '#25D366', fontWeight: 700 }}>💬 Fast approval ke liye WhatsApp par screenshot bhejo</div>
+                <div style={{ fontSize: 12, color: '#25D366', fontWeight: 700 }}>💬 WhatsApp notification sent automatically on submit</div>
               </div>
 
               {msg.text && (
@@ -390,12 +483,12 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
 
               <button onClick={handleSubmitUTR} disabled={loading}
                 style={{ width: '100%', background: loading ? 'rgba(255,255,255,0.1)' : 'linear-gradient(90deg, #14f4ce, #e0800b)', color: loading ? 'rgba(255,255,255,0.5)' : '#001a17', border: 'none', borderRadius: '10px 40px 10px 40px', padding: '17px', fontSize: 16, fontWeight: 900, cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: 1, textTransform: 'uppercase', boxShadow: loading ? 'none' : '0 0 15px rgba(0,255,213,0.3)', marginBottom: 12 }}>
-                {loading ? '⏳ Submitting...' : '✅ SUBMIT UTR'}
+                {loading ? '⏳ Submitting...' : '✅ SUBMIT & NOTIFY ADMIN'}
               </button>
 
               <button onClick={() => { setStep(1); setMsg({ type: '', text: '' }); }}
                 style={{ width: '100%', padding: '14px', background: 'transparent', border: '1.5px solid rgba(255,255,255,0.1)', borderRadius: 14, color: 'rgba(255,255,255,0.5)', fontWeight: 800, cursor: 'pointer', fontSize: 14 }}>
-                ← Amount Change Karo
+                ← Change Amount
               </button>
             </div>
           )}
@@ -433,14 +526,11 @@ export function BidsPage({ apiCall }) {
     { icon: '⏳', val: summary.pending_bids || 0, label: 'Pending',    color: '#FFA500' },
   ];
 
-  // ── FILTER LOGIC ──
   const filteredBids = bids.filter(b => {
-    // Date filter
     if (filterDate) {
-      const bidDate = new Date(b.created_at).toLocaleDateString('en-CA'); // YYYY-MM-DD
+      const bidDate = new Date(b.created_at).toLocaleDateString('en-CA');
       if (bidDate !== filterDate) return false;
     }
-    // Status filter
     if (filterStatus !== 'all' && b.status !== filterStatus) return false;
     return true;
   });
@@ -463,9 +553,9 @@ export function BidsPage({ apiCall }) {
         <span style={{ color: '#00cc44', fontWeight: 800, fontSize: 14 }}>💰 Total Winnings</span>
         <span style={{ color: '#FFD700', fontWeight: 900, fontSize: 18 }}>₹{winAmt.toLocaleString('en-IN')}</span>
       </div>
- {/* ── FILTERS ── */}
+
+      {/* ── FILTERS ── */}
       <div style={{ padding: '14px 12px 0' }}>
-        {/* Date Filter */}
         <div style={{ marginBottom: 10 }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: '#00ffd5', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 6, fontFamily: "'Teko', sans-serif" }}>📅 Date Filter</div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -485,12 +575,11 @@ export function BidsPage({ apiCall }) {
           </div>
           {filterDate && (
             <div style={{ fontSize: 12, color: '#00ffd5', fontWeight: 700, marginTop: 6 }}>
-              📅 {new Date(filterDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })} ke bids dikh rahe hain
+              📅 Showing bids for {new Date(filterDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
             </div>
           )}
         </div>
 
-        {/* Status Filter */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
           {[['all', 'All'], ['pending', '⏳ Pending'], ['win', '🏆 Won'], ['loss', '💔 Lost']].map(([val, label]) => (
             <button key={val} onClick={() => setFilterStatus(val)}
@@ -511,7 +600,7 @@ export function BidsPage({ apiCall }) {
       ) : filteredBids.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 50, color: 'rgba(255,255,255,0.5)' }}>
           <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>{filterDate ? 'Is date pe koi bid nahi' : 'No bids yet'}</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{filterDate ? 'No bids on this date' : 'No bids yet'}</div>
         </div>
       ) : (
         <div style={{ padding: '0 12px' }}>
@@ -557,7 +646,7 @@ export function TxnsPage({ apiCall, navigate }) {
       const res = await apiCall('/api/wallet/transactions');
       const list = res?.transactions || res?.data || res || [];
       setTxns(Array.isArray(list) ? list : []);
-    } catch { setError('Transactions load nahi hui. Dobara try karo.'); }
+    } catch { setError('Transactions could not be loaded. Please try again.'); }
     finally { setLoading(false); }
   };
 
@@ -574,7 +663,6 @@ export function TxnsPage({ apiCall, navigate }) {
     return ['deposit', 'winning', 'win', 'refund', 'bonus', 'referral'].includes(tx.type?.toLowerCase());
   };
 
-  // ── FILTER LOGIC ──
   const filtered = txns.filter(t => {
     if (filter !== 'all') {
       if (filter === 'credit' && !isCredit(t)) return false;
@@ -629,7 +717,7 @@ export function TxnsPage({ apiCall, navigate }) {
         </div>
         {filterDate && (
           <div style={{ fontSize: 12, color: '#00ffd5', fontWeight: 700, marginBottom: 8 }}>
-            📅 {new Date(filterDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })} ki transactions
+            📅 Transactions for {new Date(filterDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
           </div>
         )}
       </div>
@@ -646,7 +734,7 @@ export function TxnsPage({ apiCall, navigate }) {
       {!loading && !error && filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: 60, color: 'rgba(255,255,255,0.5)' }}>
           <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>{filterDate ? 'Is date pe koi transaction nahi' : 'No transactions found'}</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{filterDate ? 'No transactions on this date' : 'No transactions found'}</div>
         </div>
       )}
       <div style={{ padding: '0 12px' }}>
@@ -674,6 +762,7 @@ export function TxnsPage({ apiCall, navigate }) {
     </div>
   );
 }
+
 // ── REFERRAL PAGE ──
 export function ReferralPage({ apiCall, user, onBack }) {
   const [referralData, setReferralData] = useState({ referral_code: '', total_referrals: 0, pending_bonus: 0, total_earned: 0, referrals: [] });
@@ -715,7 +804,7 @@ export function ReferralPage({ apiCall, user, onBack }) {
     if (navigator.share) {
       navigator.share({
         title: 'MatkaKing — Join & Win!',
-        text: `MatkaKing pe join karo! Mera referral code use karo: ${referralCode} aur dono ko ₹50 bonus milega! 🎉`,
+        text: `Join MatkaKing! Use my referral code: ${referralCode} and we both get ₹50 bonus! 🎉`,
         url: referralLink,
       });
     } else {
@@ -728,9 +817,9 @@ export function ReferralPage({ apiCall, user, onBack }) {
       <SubHeader title="🎁 Refer & Earn" onBack={onBack} />
       <div style={{ background: 'linear-gradient(135deg, #021a14, #063d35)', margin: '16px 12px', borderRadius: 20, padding: '24px 20px', textAlign: 'center', boxShadow: '0 0 20px rgba(0,255,213,0.1)', border: '1px solid rgba(0,255,213,0.2)' }}>
         <div style={{ fontSize: 48, marginBottom: 8, textShadow: '0 0 15px rgba(255,215,0,0.5)' }}>🎁</div>
-        <div style={{ color: '#FFD700', fontWeight: 900, fontSize: 22, marginBottom: 6, textShadow: '0 0 10px rgba(255,215,0,0.4)' }}>Dono ko ₹50 Bonus!</div>
+        <div style={{ color: '#FFD700', fontWeight: 900, fontSize: 22, marginBottom: 6, textShadow: '0 0 10px rgba(255,215,0,0.4)' }}>Both Get ₹50 Bonus!</div>
         <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 1.6, fontWeight: 600 }}>
-          Apna referral code share karo<br />Dono ko ₹50 milega jab wo pehli baar deposit karein ✅
+          Share your referral code.<br />Both get ₹50 on their first deposit ✅
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(0,255,213,0.15)' }}>
           {[
@@ -750,13 +839,13 @@ export function ReferralPage({ apiCall, user, onBack }) {
       </div>
 
       <div style={B.card}>
-        <div style={{ fontSize: 12, fontWeight: 800, color: '#00ffd5', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 14, fontFamily: "'Teko', sans-serif" }}>🔑 Aapka Referral Code</div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: '#00ffd5', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 14, fontFamily: "'Teko', sans-serif" }}>🔑 Your Referral Code</div>
         <div style={{ background: 'rgba(0,255,213,0.05)', borderRadius: 14, padding: '18px', textAlign: 'center', border: '1.5px dashed rgba(0,255,213,0.3)', marginBottom: 14 }}>
           <div style={{ fontSize: 28, fontWeight: 900, color: '#FFD700', letterSpacing: 4, textShadow: '0 0 10px rgba(255,215,0,0.3)' }}>
             {loading ? (
               <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', letterSpacing: 1 }}>⏳ Loading...</span>
             ) : referralCode ? referralCode : (
-              <span style={{ fontSize: 13, color: '#ff2244' }}>❌ Code nahi mila — logout karke login karo</span>
+              <span style={{ fontSize: 13, color: '#ff2244' }}>❌ Code not found — please re-login</span>
             )}
           </div>
         </div>
@@ -771,12 +860,12 @@ export function ReferralPage({ apiCall, user, onBack }) {
       </div>
 
       <div style={{ margin: '0 12px', background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', borderRadius: 16, border: '1px solid rgba(0,255,213,0.15)', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.4)', marginBottom: 12 }}>
-        <div style={{ padding: '14px 16px', background: 'rgba(0,255,213,0.05)', borderBottom: '1px solid rgba(0,255,213,0.15)', fontSize: 12, fontWeight: 800, color: '#00ffd5', textTransform: 'uppercase', letterSpacing: 1.5, fontFamily: "'Teko', sans-serif" }}>📋 Kaise Kaam Karta Hai?</div>
+        <div style={{ padding: '14px 16px', background: 'rgba(0,255,213,0.05)', borderBottom: '1px solid rgba(0,255,213,0.15)', fontSize: 12, fontWeight: 800, color: '#00ffd5', textTransform: 'uppercase', letterSpacing: 1.5, fontFamily: "'Teko', sans-serif" }}>📋 How It Works</div>
         {[
-          { n: '1', t: 'Code Share Karo', d: 'Apna referral code ya link dosto ko bhejo' },
-          { n: '2', t: 'Dost Join Kare', d: 'Wo register karte waqt aapka code daale' },
-          { n: '3', t: 'Pehla Deposit Kare', d: 'Dost pehli baar deposit kare aur admin approve kare' },
-          { n: '4', t: 'Dono Ko ₹50 Mile', d: 'Aapko aur aapke dost — dono ko ₹50 wallet mein credit!' },
+          { n: '1', t: 'Share Your Code', d: 'Send your referral code or link to friends' },
+          { n: '2', t: 'Friend Joins',    d: 'They use your code during registration' },
+          { n: '3', t: 'First Deposit',   d: 'Friend makes their first deposit (admin approved)' },
+          { n: '4', t: 'Both Get ₹50',   d: 'You and your friend both get ₹50 wallet credit!' },
         ].map((s, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderBottom: i < 3 ? '1px solid rgba(0,255,213,0.1)' : 'none' }}>
             <div style={{ width: 32, height: 32, background: 'linear-gradient(135deg,#14f4ce,#e0800b)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#001a17', fontWeight: 900, fontSize: 14, flexShrink: 0 }}>{s.n}</div>
@@ -790,7 +879,7 @@ export function ReferralPage({ apiCall, user, onBack }) {
 
       {!loading && referralData.referrals && referralData.referrals.length > 0 && (
         <div style={{ margin: '0 12px' }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: '#00ffd5', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10, fontFamily: "'Teko', sans-serif" }}>👥 Mere Referrals</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: '#00ffd5', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10, fontFamily: "'Teko', sans-serif" }}>👥 My Referrals</div>
           {referralData.referrals.map((r, i) => (
             <div key={i} style={{ background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', borderRadius: 14, padding: '14px', marginBottom: 8, border: '1px solid rgba(0,255,213,0.15)', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 4px 15px rgba(0,0,0,0.4)', borderLeft: `4px solid ${r.status === 'credited' ? '#00cc44' : '#FFA500'}` }}>
               <div style={{ width: 40, height: 40, background: 'rgba(0,255,213,0.05)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, border: '1px solid rgba(0,255,213,0.1)' }}>👤</div>
@@ -810,8 +899,8 @@ export function ReferralPage({ apiCall, user, onBack }) {
       {!loading && (!referralData.referrals || referralData.referrals.length === 0) && (
         <div style={{ textAlign: 'center', padding: '30px 20px', color: 'rgba(255,255,255,0.5)' }}>
           <div style={{ fontSize: 40, marginBottom: 10 }}>👥</div>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>Abhi tak koi referral nahi</div>
-          <div style={{ fontSize: 12, marginTop: 6 }}>Apna code share karo aur ₹50 kamao!</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>No referrals yet</div>
+          <div style={{ fontSize: 12, marginTop: 6 }}>Share your code and earn ₹50!</div>
         </div>
       )}
     </div>
@@ -822,19 +911,16 @@ export function ReferralPage({ apiCall, user, onBack }) {
 export function WalletPage({ wallet, onAdd, onWith, user, navigate, apiCall }) {
   const [stats, setStats] = useState({ highest_win: 0, total_bids: 0, games_won: 0, avg_bid: 0 });
   const [showDeposit, setShowDeposit] = useState(false);
-
   const [walletStats, setWalletStats] = useState({ total_deposited: 0, total_won: 0, total_withdrawn: 0 });
 
   useEffect(() => {
     if (apiCall) {
-      // Profile stats
       apiCall('/api/auth/profile').then(res => {
         if (res?.success && res?.user) {
           setStats({ highest_win: res.user.highest_win || 0, total_bids: res.user.total_bids || 0, games_won: res.user.games_won || 0, avg_bid: res.user.avg_bid || 0 });
         }
       }).catch(() => {});
 
-      // Wallet stats (total added, won, withdrawn)
       apiCall('/api/wallet/balance').then(res => {
         if (res?.success) {
           setWalletStats({
@@ -860,7 +946,8 @@ export function WalletPage({ wallet, onAdd, onWith, user, navigate, apiCall }) {
         <div style={{ fontSize: 42, fontWeight: 900, color: '#FFD700', marginBottom: 20, letterSpacing: -1, textShadow: '0 0 20px rgba(255,215,0,0.4)', fontFamily: "'Orbitron', sans-serif" }}>₹{wallet.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
           <button onClick={handleAdd} style={{ flex: 1, maxWidth: 150, background: 'linear-gradient(to right, #006622, #00cc44)', color: '#fff', border: 'none', borderRadius: 20, padding: '12px 0', fontWeight: 900, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.3)', textTransform: 'uppercase', letterSpacing: 1 }}>💰 ADD MONEY</button>
-<button onClick={onWith} style={{ flex: 1, maxWidth: 150, background: 'linear-gradient(to right, #660011, #ff2244)', color: '#fff', border: 'none', borderRadius: 20, padding: '12px 0', fontWeight: 900, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.3)', textTransform: 'uppercase', letterSpacing: 1 }}>💸 WITHDRAW</button></div>
+          <button onClick={onWith} style={{ flex: 1, maxWidth: 150, background: 'linear-gradient(to right, #660011, #ff2244)', color: '#fff', border: 'none', borderRadius: 20, padding: '12px 0', fontWeight: 900, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.3)', textTransform: 'uppercase', letterSpacing: 1 }}>💸 WITHDRAW</button>
+        </div>
         <div style={{ display: 'flex', justifyContent: 'space-around', borderTop: '1px solid rgba(0,255,213,0.15)', marginTop: 24, paddingTop: 16 }}>
           {[
            { label: 'Total Added', val: '₹' + Number(walletStats.total_deposited || 0).toLocaleString('en-IN') },
@@ -883,7 +970,7 @@ export function WalletPage({ wallet, onAdd, onWith, user, navigate, apiCall }) {
           { ic: '💰', l: 'Add Fund',           sub: 'UPI, Net Banking, Cards',  fn: handleAdd },
           { ic: '💸', l: 'Withdraw Fund',       sub: 'Bank Transfer, UPI',       fn: onWith },
           { ic: '📋', l: 'Transaction History', sub: 'All credits & debits',     fn: () => navigate && navigate('txns') },
-          { ic: '🎁', l: 'Refer & Earn',        sub: 'Dono ko ₹50 bonus on first deposit', fn: () => navigate && navigate('referral') },
+          { ic: '🎁', l: 'Refer & Earn',        sub: 'Both get ₹50 bonus on first deposit', fn: () => navigate && navigate('referral') },
         ].map((item, i) => (
           <div key={i} onClick={item.fn}
             style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px', borderBottom: i < 3 ? '1px solid rgba(0,255,213,0.1)' : 'none', cursor: item.fn ? 'pointer' : 'default', transition: 'background 0.2s' }}
@@ -916,20 +1003,21 @@ export function WalletPage({ wallet, onAdd, onWith, user, navigate, apiCall }) {
     </div>
   );
 }
+
 // ── HOW TO PLAY ──
 export function HowToPlayPage({ onBack }) {
   return (
     <div style={B.page}>
       <SubHeader title="📖 How to Play" onBack={onBack} />
       <div style={{ padding: '0 12px 20px' }}>
-        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', padding: '16px 4px', lineHeight: 1.6, fontWeight: 500 }}>Matka ek number guessing game hai. Open aur close numbers pe bet lagao aur jeeto!</div>
+        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', padding: '16px 4px', lineHeight: 1.6, fontWeight: 500 }}>Matka is a number guessing game. Place bets on open and close numbers and win!</div>
         {[
-          { n: '1', t: 'Wallet Mein Paisa Daalo',  d: 'UPI se deposit karo, admin 0–5 ghante mein approve karega.' },
-          { n: '2', t: 'Game Chunno',               d: 'Home screen se koi bhi open game chunno — Kalyan, Milan Day, etc.' },
-          { n: '3', t: 'Game Type Chunno',          d: 'Single Digit, Jodi, Pana, Sangam — apni marzi ka game type.' },
-          { n: '4', t: 'Number & Amount Daalo',     d: 'Lucky number chunno aur bet amount daalo. Minimum ₹10.' },
-          { n: '5', t: 'Bid Place Karo',            d: 'Place Bid dabao. Amount wallet se turant cut ho jaayega.' },
-          { n: '6', t: 'Result Ka Intezaar Karo',   d: 'Result aane ke baad winning amount winning wallet mein credit hogi.' },
+          { n: '1', t: 'Add Money to Wallet',     d: 'Deposit via UPI. Admin approves within 0–5 hours.' },
+          { n: '2', t: 'Choose a Game',            d: 'Pick any open game from the home screen — Kalyan, Milan Day, etc.' },
+          { n: '3', t: 'Choose Game Type',         d: 'Single Digit, Jodi, Pana, Sangam — pick your preferred type.' },
+          { n: '4', t: 'Enter Number & Amount',    d: 'Pick your lucky number and bid amount. Minimum ₹10.' },
+          { n: '5', t: 'Place Bid',                d: 'Tap Place Bid. Amount is instantly deducted from your wallet.' },
+          { n: '6', t: 'Wait for Result',          d: 'Winnings are credited to your winning balance after result declaration.' },
         ].map((s, i) => (
           <div key={i} style={{ background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', borderRadius: 14, padding: '16px', marginBottom: 10, border: '1px solid rgba(0,255,213,0.15)', display: 'flex', gap: 14, boxShadow: '0 4px 15px rgba(0,0,0,0.4)' }}>
             <div style={{ width: 36, height: 36, background: 'linear-gradient(135deg,#14f4ce,#e0800b)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#001a17', fontWeight: 900, fontSize: 16, flexShrink: 0, boxShadow: '0 0 10px rgba(0,255,213,0.3)' }}>{s.n}</div>
@@ -963,15 +1051,15 @@ export function HowToPlayPage({ onBack }) {
 export function FAQPage({ onBack }) {
   const [open, setOpen] = useState(null);
   const faqs = [
-    { q: 'Account kaise banayein?',             a: 'App ke login page pe "Register" dabao. Mobile number aur password se account bana sakte ho.' },
-    { q: 'Paisa kaise add karein?',             a: 'Wallet → Add Money → UPI se payment → UTR submit karo → Admin 0–5 ghante mein approve karega.' },
-    { q: 'Minimum deposit kitna hai?',          a: 'Minimum deposit ₹100 hai. Maximum ₹1,00,000 tak kar sakte hain.' },
-    { q: 'Winning kaise withdraw karein?',      a: 'Winning Balance → Withdraw → UPI ya Bank details daalo → Admin approve karega. Min ₹500.' },
-    { q: 'Result kab aata hai?',                a: 'Har game ka alag result time hota hai. Game card pe time dikh jaata hai.' },
-    { q: 'Bid cancel ho sakti hai?',            a: 'Nahi. Ek baar bid place hone ke baad cancel nahi hogi.' },
-    { q: 'Ek se zyada account ban sakta hai?',  a: 'Nahi. Ek mobile number pe sirf ek account allowed hai.' },
-    { q: 'Referral bonus kab milega?',          a: 'Jab aapka referral pehli baar deposit kare aur admin approve kare — dono ko ₹50 turant credit ho jaayega.' },
-    { q: 'Koi problem ho toh kya karein?',      a: 'Support page pe jaao. Call ya Telegram se contact karo. Mon–Sat 10AM–8PM.' },
+    { q: 'How do I create an account?',       a: 'Tap "Register" on the login page. Sign up with your mobile number and password.' },
+    { q: 'How do I add money?',               a: 'Go to Wallet → Add Money → Pay via UPI → Submit UTR. Admin approves within 0–5 hours.' },
+    { q: 'What is the minimum deposit?',      a: 'Minimum deposit is ₹100. Maximum is ₹1,00,000.' },
+    { q: 'How do I withdraw winnings?',       a: 'Winning Balance → Withdraw → Enter UPI or bank details → Admin will approve. Min ₹500.' },
+    { q: 'When are results declared?',        a: 'Each game has its own result time, visible on the game card.' },
+    { q: 'Can I cancel a bid?',               a: 'No. Once a bid is placed, it cannot be cancelled.' },
+    { q: 'Can I have multiple accounts?',     a: 'No. Only one account is allowed per mobile number.' },
+    { q: 'When is referral bonus credited?',  a: 'When your referral makes their first deposit and admin approves — both get ₹50 instantly.' },
+    { q: 'What if I have a problem?',         a: 'Go to the Support page and contact us via WhatsApp or Telegram. Mon–Sat, 10AM–8PM.' },
   ];
   return (
     <div style={B.page}>
@@ -996,14 +1084,14 @@ export function FAQPage({ onBack }) {
 // ── TERMS ──
 export function TermsPage({ onBack }) {
   const items = [
-    { t: '1. Eligibility',           d: 'Sirf 18+ log hi use kar sakte hain. Minor hone pe account band ho jaayega.' },
-    { t: '2. Account Rules',         d: 'Ek user sirf ek account rakh sakta hai. Fake information pe permanent ban ho sakta hai.' },
-    { t: '3. Deposits',              d: 'Sirf UPI aur Bank Transfer se deposit hoga. Minimum deposit ₹100 hai.' },
-    { t: '4. Withdrawals',           d: 'Sirf winning balance se withdrawal hogi. Minimum ₹500 chahiye. Admin approve karega.' },
-    { t: '5. Gameplay',              d: 'Bid lagane ke baad cancel nahi hogi. Cheating pe permanent ban milega.' },
-    { t: '6. Responsible Gaming',    d: 'Apni financial limit ke andar khelo. Gambling addiction feel ho toh support se contact karein.' },
-    { t: '7. Liability',             d: 'Technical issues ya server downtime ke liye zimmedaar nahi hai.' },
-    { t: '8. Account Termination',   d: 'Rules violation pe account band kar sakta hai. Remaining balance refund kiya jaayega.' },
+    { t: '1. Eligibility',           d: 'Only users 18+ may use this platform. Accounts of minors will be permanently closed.' },
+    { t: '2. Account Rules',         d: 'One account per user. Fake information may result in a permanent ban.' },
+    { t: '3. Deposits',              d: 'Deposits accepted via UPI and Bank Transfer only. Minimum deposit is ₹100.' },
+    { t: '4. Withdrawals',           d: 'Withdrawals are only from winning balance. Minimum ₹500 required. Admin approval needed.' },
+    { t: '5. Gameplay',              d: 'Bids cannot be cancelled after placement. Cheating results in a permanent ban.' },
+    { t: '6. Responsible Gaming',    d: 'Play within your financial limits. Contact support if you experience gambling-related issues.' },
+    { t: '7. Liability',             d: 'We are not responsible for losses due to technical issues or server downtime.' },
+    { t: '8. Account Termination',   d: 'Accounts may be closed for rule violations. Remaining balance will be refunded.' },
   ];
   return (
     <div style={B.page}>
@@ -1015,7 +1103,7 @@ export function TermsPage({ onBack }) {
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>{s.d}</div>
           </div>
         ))}
-        <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 16, fontWeight: 600 }}>MatkaKing use karne se aap in terms se agree karte hain.</p>
+        <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 16, fontWeight: 600 }}>By using MatkaKing, you agree to these terms.</p>
       </div>
     </div>
   );
@@ -1024,11 +1112,11 @@ export function TermsPage({ onBack }) {
 // ── PRIVACY ──
 export function PrivacyPage({ onBack }) {
   const items = [
-    { t: '📱 Kaunsa Data Collect Hota Hai?', d: 'Mobile number, naam, device info aur transaction history. Koi bhi card number ya banking password store nahi hota.' },
-    { t: '🔐 Data Kaise Safe Hai?',           d: 'Aapka data encrypted servers pe store hota hai. JWT tokens se authentication secure hai.' },
-    { t: '💳 Payment Information',            d: 'UPI ID sirf withdrawal ke liye use hota hai. Bank details encrypted form mein store hoti hain.' },
-    { t: '👤 Aapke Rights',                   d: 'Aap apna account aur data delete karwa sakte hain. Transaction history download kar sakte hain.' },
-    { t: '📞 Contact',                        d: 'Privacy se related kisi bhi sawaal ke liye Support page pe humse contact karein.' },
+    { t: '📱 What Data Do We Collect?', d: 'Mobile number, name, device info, and transaction history. No card numbers or banking passwords are stored.' },
+    { t: '🔐 How Is Data Secured?',     d: 'Your data is stored on encrypted servers. Authentication is secured via JWT tokens.' },
+    { t: '💳 Payment Information',      d: 'UPI ID is used for withdrawals only. Bank details are stored in encrypted form.' },
+    { t: '👤 Your Rights',              d: 'You can request account and data deletion. Transaction history can be downloaded.' },
+    { t: '📞 Contact',                  d: 'For any privacy-related queries, contact us via the Support page.' },
   ];
   return (
     <div style={B.page}>
@@ -1062,20 +1150,20 @@ export function SupportPage({ apiCall, user }) {
 
   const updateProfile = async () => {
     setSuccessMsg(''); setErrorMsg('');
-    if (!profileForm.username.trim()) { setErrorMsg('❌ Username dalna zaruri hai!'); return; }
+    if (!profileForm.username.trim()) { setErrorMsg('❌ Username is required!'); return; }
     setLoading(true);
     try {
       const profileRes = await apiCall('/api/auth/update-profile', 'PUT', { name: profileForm.username.trim() });
-      if (!profileRes?.success) { setErrorMsg(profileRes?.message || '❌ Profile update fail ho gaya'); setLoading(false); return; }
+      if (!profileRes?.success) { setErrorMsg(profileRes?.message || '❌ Profile update failed'); setLoading(false); return; }
       if (profileForm.newPassword) {
-        if (!profileForm.oldPassword) { setErrorMsg('❌ Purana password zaruri hai'); setLoading(false); return; }
-        if (profileForm.newPassword !== profileForm.confirmPassword) { setErrorMsg('❌ Passwords match nahi ho rahe'); setLoading(false); return; }
+        if (!profileForm.oldPassword) { setErrorMsg('❌ Current password is required'); setLoading(false); return; }
+        if (profileForm.newPassword !== profileForm.confirmPassword) { setErrorMsg('❌ Passwords do not match'); setLoading(false); return; }
         const passRes = await apiCall('/api/auth/update-password', 'POST', { oldPassword: profileForm.oldPassword, newPassword: profileForm.newPassword });
-        if (!passRes?.success) { setErrorMsg(passRes?.message || '❌ Password update fail'); setLoading(false); return; }
+        if (!passRes?.success) { setErrorMsg(passRes?.message || '❌ Password update failed'); setLoading(false); return; }
       }
-      setSuccessMsg('✅ Profile successfully updated!');
+      setSuccessMsg('✅ Profile updated successfully!');
       setProfileForm(p => ({ ...p, oldPassword: '', newPassword: '', confirmPassword: '' }));
-    } catch { setErrorMsg('❌ Server se connect nahi ho pa raha.'); }
+    } catch { setErrorMsg('❌ Unable to connect to server.'); }
     finally { setLoading(false); }
   };
 
@@ -1083,75 +1171,69 @@ export function SupportPage({ apiCall, user }) {
     <div style={B.page}>
       <SubHeader title="👤 My Profile" />
       <div style={{ background: 'linear-gradient(135deg, #021a14, #063d35)', margin: '16px 12px', borderRadius: 20, padding: '20px', boxShadow: '0 0 20px rgba(0,255,213,0.1)', border: '1px solid rgba(0,255,213,0.2)' }}>
-  <style>{`
-    @keyframes badgePulse {
-      0%, 100% { box-shadow: 0 0 6px rgba(0,255,213,0.4), 0 0 12px rgba(0,255,213,0.2); border-color: rgba(0,255,213,0.6); }
-      50% { box-shadow: 0 0 14px rgba(0,255,213,0.8), 0 0 28px rgba(0,255,213,0.4); border-color: #00ffd5; }
-    }
-    @keyframes avatarGlow {
-      0%, 100% { box-shadow: 0 0 10px rgba(0,255,213,0.3); }
-      50% { box-shadow: 0 0 25px rgba(0,255,213,0.7); }
-    }
-    @keyframes dotBlink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-  `}</style>
+        <style>{`
+          @keyframes badgePulse {
+            0%, 100% { box-shadow: 0 0 6px rgba(0,255,213,0.4), 0 0 12px rgba(0,255,213,0.2); border-color: rgba(0,255,213,0.6); }
+            50% { box-shadow: 0 0 14px rgba(0,255,213,0.8), 0 0 28px rgba(0,255,213,0.4); border-color: #00ffd5; }
+          }
+          @keyframes avatarGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(0,255,213,0.3); }
+            50% { box-shadow: 0 0 25px rgba(0,255,213,0.7); }
+          }
+          @keyframes dotBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+          }
+        `}</style>
 
-  <div style={{ display: 'flex', alignItems: 'center', gap: 50, justifyContent: 'center' }}>
-    
-    {/* Avatar */}
-    <div style={{ position: 'relative', flexShrink: 0 }}>
-      <div style={{ width: 90, height: 90, background: 'linear-gradient(135deg, rgba(0,255,213,0.15), rgba(0,255,213,0.05))', border: '2.5px solid rgba(0,255,213,0.4)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 38, fontWeight: 900, color: '#00ffd5', animation: 'avatarGlow 2.5s ease-in-out infinite', fontFamily: "'Teko', sans-serif" }}>
-        {(user?.name || 'U').charAt(0).toUpperCase()}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 50, justifyContent: 'center' }}>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div style={{ width: 90, height: 90, background: 'linear-gradient(135deg, rgba(0,255,213,0.15), rgba(0,255,213,0.05))', border: '2.5px solid rgba(0,255,213,0.4)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 38, fontWeight: 900, color: '#00ffd5', animation: 'avatarGlow 2.5s ease-in-out infinite', fontFamily: "'Teko', sans-serif" }}>
+              {(user?.name || 'U').charAt(0).toUpperCase()}
+            </div>
+            <div style={{ position: 'absolute', bottom: 4, right: 4, width: 14, height: 14, background: '#00cc44', borderRadius: '50%', border: '2px solid #021a14', animation: 'dotBlink 1.5s ease-in-out infinite' }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: '#FFD700', fontWeight: 900, fontSize: 18, letterSpacing: 0.5, textShadow: '0 0 10px rgba(255,215,0,0.3)' }}>
+              {user?.name || 'User'}
+            </div>
+            <div style={{ color: 'rgba(0,255,213,0.7)', fontSize: 13, marginTop: 4, fontWeight: 600 }}>
+              📱 {user?.mobile || '—'}
+            </div>
+            <div style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(0,255,213,0.08)', borderRadius: 20, padding: '5px 14px', fontSize: 11, color: '#00ffd5', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.5, border: '1.5px solid rgba(0,255,213,0.3)', animation: 'badgePulse 2s ease-in-out infinite' }}>
+              <span style={{ width: 7, height: 7, background: '#00ffd5', borderRadius: '50%', display: 'inline-block', animation: 'dotBlink 1.5s ease-in-out infinite' }} />
+              ✅ Verified
+            </div>
+          </div>
+        </div>
       </div>
-      {/* Online dot */}
-      <div style={{ position: 'absolute', bottom: 4, right: 4, width: 14, height: 14, background: '#00cc44', borderRadius: '50%', border: '2px solid #021a14', animation: 'dotBlink 1.5s ease-in-out infinite' }} />
-    </div>
-
-    {/* Info */}
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ color: '#FFD700', fontWeight: 900, fontSize: 18, letterSpacing: 0.5, textShadow: '0 0 10px rgba(255,215,0,0.3)' }}>
-        {user?.name || 'User'}
-      </div>
-      <div style={{ color: 'rgba(0,255,213,0.7)', fontSize: 13, marginTop: 4, fontWeight: 600 }}>
-        📱 {user?.mobile || '—'}
-      </div>
-      <div style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(0,255,213,0.08)', borderRadius: 20, padding: '5px 14px', fontSize: 11, color: '#00ffd5', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.5, border: '1.5px solid rgba(0,255,213,0.3)', animation: 'badgePulse 2s ease-in-out infinite' }}>
-        <span style={{ width: 7, height: 7, background: '#00ffd5', borderRadius: '50%', display: 'inline-block', animation: 'dotBlink 1.5s ease-in-out infinite' }} />
-        ✅ Verified
-      </div>
-    </div>
-
-  </div>
-</div>
 
       {user?.referral_code && (
         <div style={{ margin: '0 12px 12px', background: 'linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,165,0,0.02))', borderRadius: 16, border: '1px solid rgba(255,215,0,0.2)', padding: '16px', boxShadow: '0 0 15px rgba(255,215,0,0.05)' }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10, fontFamily: "'Teko', sans-serif" }}>🎁 Aapka Referral Code</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10, fontFamily: "'Teko', sans-serif" }}>🎁 Your Referral Code</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '12px 14px', border: '1px dashed rgba(255,215,0,0.3)' }}>
               <div style={{ fontSize: 22, fontWeight: 900, color: '#FFD700', letterSpacing: 3 }}>{user.referral_code}</div>
             </div>
-          <button onClick={() => { 
-  navigator.clipboard.writeText(user.referral_code);
-  const btn = document.getElementById('ref-copy-btn');
-  btn.style.background = 'linear-gradient(90deg, #00cc44, #006622)';
-  btn.innerText = '✅ Copied!';
-  btn.style.transform = 'scale(0.95)';
-  setTimeout(() => {
-    btn.style.background = 'linear-gradient(90deg, #14f4ce, #e0800b)';
-    btn.innerText = '📋 Copy';
-    btn.style.transform = 'scale(1)';
-  }, 2000);
-}}
-  id="ref-copy-btn"
-  style={{ padding: '12px 16px', background: 'linear-gradient(90deg, #14f4ce, #e0800b)', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 13, cursor: 'pointer', color: '#001a17', transition: 'all 0.3s ease' }}>
-  📋 Copy
-</button>
+            <button onClick={() => {
+              navigator.clipboard.writeText(user.referral_code);
+              const btn = document.getElementById('ref-copy-btn');
+              btn.style.background = 'linear-gradient(90deg, #00cc44, #006622)';
+              btn.innerText = '✅ Copied!';
+              btn.style.transform = 'scale(0.95)';
+              setTimeout(() => {
+                btn.style.background = 'linear-gradient(90deg, #14f4ce, #e0800b)';
+                btn.innerText = '📋 Copy';
+                btn.style.transform = 'scale(1)';
+              }, 2000);
+            }}
+              id="ref-copy-btn"
+              style={{ padding: '12px 16px', background: 'linear-gradient(90deg, #14f4ce, #e0800b)', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 13, cursor: 'pointer', color: '#001a17', transition: 'all 0.3s ease' }}>
+              📋 Copy
+            </button>
           </div>
           <div style={{ fontSize: 11, color: '#FFD700', marginTop: 10, fontWeight: 700, textAlign: 'center' }}>
-            👥 Share karo → Dost join kare → Dono ko ₹50 bonus!
+            👥 Share → Friend joins → Both get ₹50 bonus!
           </div>
         </div>
       )}
@@ -1160,15 +1242,15 @@ export function SupportPage({ apiCall, user }) {
         {successMsg && <div style={{ background: 'rgba(0,204,68,0.1)', border: '1px solid rgba(0,204,68,0.3)', borderRadius: 10, padding: '12px', marginBottom: 16, color: '#00cc44', fontSize: 13, fontWeight: 700 }}>{successMsg}</div>}
         {errorMsg   && <div style={{ background: 'rgba(255,34,68,0.1)', border: '1px solid rgba(255,34,68,0.3)', borderRadius: 10, padding: '12px', marginBottom: 16, color: '#ff2244', fontSize: 13, fontWeight: 700 }}>{errorMsg}</div>}
         <label style={B.label}>Full Name</label>
-        <input style={B.input} value={profileForm.username} onChange={e => setProfileForm(p => ({ ...p, username: e.target.value }))} placeholder="Apna naam likhein" />
+        <input style={B.input} value={profileForm.username} onChange={e => setProfileForm(p => ({ ...p, username: e.target.value }))} placeholder="Enter your name" />
         <div style={{ borderTop: '1px solid rgba(0,255,213,0.1)', paddingTop: 20, marginTop: 8 }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: '#00ffd5', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16, fontFamily: "'Teko', sans-serif" }}>🔐 Change Password (Optional)</div>
           <label style={B.label}>Current Password</label>
-          <input type="password" style={B.input} placeholder="Purana password" value={profileForm.oldPassword} onChange={e => setProfileForm(p => ({ ...p, oldPassword: e.target.value }))} />
+          <input type="password" style={B.input} placeholder="Current password" value={profileForm.oldPassword} onChange={e => setProfileForm(p => ({ ...p, oldPassword: e.target.value }))} />
           <label style={B.label}>New Password</label>
-          <input type="password" style={B.input} placeholder="Naya password (min 6 characters)" value={profileForm.newPassword} onChange={e => setProfileForm(p => ({ ...p, newPassword: e.target.value }))} />
+          <input type="password" style={B.input} placeholder="New password (min 6 characters)" value={profileForm.newPassword} onChange={e => setProfileForm(p => ({ ...p, newPassword: e.target.value }))} />
           <label style={B.label}>Confirm New Password</label>
-          <input type="password" style={{ ...B.input, marginBottom: 0 }} placeholder="Dobara naya password" value={profileForm.confirmPassword} onChange={e => setProfileForm(p => ({ ...p, confirmPassword: e.target.value }))} />
+          <input type="password" style={{ ...B.input, marginBottom: 0 }} placeholder="Confirm new password" value={profileForm.confirmPassword} onChange={e => setProfileForm(p => ({ ...p, confirmPassword: e.target.value }))} />
         </div>
         <button onClick={updateProfile} disabled={loading} style={{ ...B.btn, marginTop: 20, opacity: loading ? 0.6 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}>
           {loading ? '⏳ Updating...' : '💾 UPDATE PROFILE'}
@@ -1226,7 +1308,7 @@ export function GameRatesPage({ onBack }) {
         <div style={{ background: 'linear-gradient(135deg, #021a14, #063d35)', borderRadius: 16, padding: '20px', textAlign: 'center', marginBottom: 20, boxShadow: '0 0 20px rgba(0,255,213,0.1)', border: '1px solid rgba(0,255,213,0.2)' }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>🏆</div>
           <div style={{ color: '#FFD700', fontWeight: 900, fontSize: 20, marginBottom: 4, textShadow: '0 0 10px rgba(255,215,0,0.4)' }}>Game Rates</div>
-          <div style={{ color: 'rgba(0,255,213,0.7)', fontSize: 13 }}>We have Best Main Market Game Rates</div>
+          <div style={{ color: 'rgba(0,255,213,0.7)', fontSize: 13 }}>Best Main Market Game Rates</div>
         </div>
         <div style={{ fontSize: 12, fontWeight: 800, color: '#00ffd5', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12, fontFamily: "'Teko', sans-serif" }}>🎯 Main Market Rates</div>
         {mainRates.map((g, i) => (
@@ -1243,7 +1325,7 @@ export function GameRatesPage({ onBack }) {
           </div>
         ))}
         <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
-          We have Best Starline Game Rates
+          Best Starline Game Rates
         </div>
       </div>
     </div>
