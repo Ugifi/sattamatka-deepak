@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API = 'https://ziddi-1-we11.onrender.com';
+const API = 'https://sattamatka-deepak-hy1n.onrender.com';
 
 // ────────────────────────────────────────────────
 //  ADD MONEY MODAL — Dark Theme
