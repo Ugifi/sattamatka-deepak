@@ -605,7 +605,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
                 ))}
               </div>
             </div>
-            <AmtInput label="💰 Amount per Pana (Min ₹10)" />
+            <AmtInput amt={amt} setAmt={setAmt} chips={chips} label="💰 Amount per Pana (Min ₹10)" />
             {num && Number(amt) >= 10 && (<div className="bf-infobox">📊 Selected: <strong>{String(num).padStart(3,'0')}</strong> | Bid: <strong>₹{Number(amt).toLocaleString()}</strong></div>)}
             <AddBtn label="+ Add to List" />
             <BulkTable />
