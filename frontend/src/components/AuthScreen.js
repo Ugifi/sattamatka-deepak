@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_URL = 'https://ziddi-1-we11.onrender.com';
+const API_URL = 'https://sattamatka-deepak-hy1n.onrender.com';
 
 // ── FORGOT PASSWORD MODAL ─────────────────────────────────────────────────────
 function ForgotPasswordModal({ onClose }) {
@@ -316,7 +316,7 @@ export default function AuthScreen({ onLogin }) {
             </div>
             {referralCode && (
               <div style={{ fontSize: 11, color: '#00ffd5', marginTop: 5, marginLeft: 4, fontWeight: 600 }}>
-                🎉 Dono ko ₹50 bonus milega pehle deposit par!
+               
               </div>
             )}
           </div>
@@ -337,7 +337,7 @@ export default function AuthScreen({ onLogin }) {
 
         {tab === 'login' && (
           <div style={{ textAlign: 'center', marginTop: 14, fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
-            🎁 Dosto ko refer karo, dono ko ₹50 bonus pao!
+            
           </div>
         )}
       </div>
