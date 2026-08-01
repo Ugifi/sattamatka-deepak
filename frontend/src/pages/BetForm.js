@@ -189,6 +189,7 @@ function SPMotorSection({ num, setNum, amt, setAmt, chips, onSubmit, openClose, 
 function RedJodiSection({ num, setNum, amt, setAmt, chips, onSubmit, openClose, submitting }) {
   const [redType, setRedType] = useState('');
   const activeJodis = redType === 'half' ? HALF_RED_JODIS : redType === 'full' ? FULL_RED_JODIS : [];
+  const totalAmt = activeJodis.length * Number(amt || 0);
 
   return <>
     <div className="bf-fg">
@@ -202,13 +203,20 @@ function RedJodiSection({ num, setNum, amt, setAmt, chips, onSubmit, openClose, 
     {redType === '' && (<div className="bf-desc-box" style={{ background: 'rgba(255,165,0,0.1)', color: '#FFA500', border: '1px solid rgba(255,165,0,0.3)' }}>⬆️ Pehle <strong>Half Red Jodi</strong> ya <strong>Full Red Jodi</strong> select karo</div>)}
     {redType !== '' && (
       <div className="bf-fg">
-        <div className="bf-jodi-scroll"><div className="bf-jodi-grid">{activeJodis.map(j => (<div key={j} className={`bf-jchip${num === j ? ' active' : ''}`} onClick={() => setNum(j)}>{j}</div>))}</div></div>
+        <label className="bf-label">Saare {activeJodis.length} Jodis select honge</label>
+        <div className="bf-jodi-scroll"><div className="bf-jodi-grid">{activeJodis.map(j => (<div key={j} className="bf-jchip active" style={{cursor:'default'}}>{j}</div>))}</div></div>
       </div>
     )}
-    <AmtInput amt={amt} setAmt={setAmt} chips={chips} />
-    {num && Number(amt) >= 10 && (
-      <button className="bf-place-btn" onClick={async () => { if (submitting) return; await onSubmit({ number: num, amount: Number(amt), session: openClose }); }} disabled={submitting} style={{ opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}>
-        {submitting ? '⏳ Placing...' : `🎯 Place Bid — ₹${Number(amt).toLocaleString()}`}
+    {redType !== '' && <AmtInput amt={amt} setAmt={setAmt} chips={chips} label="Amount per Jodi (Min ₹10)" />}
+    {redType !== '' && Number(amt) >= 10 && (
+      <div className="bf-infobox">📊 <strong>{activeJodis.length} jodis</strong> × ₹<strong>{amt}</strong> = Total: <strong>₹{totalAmt.toLocaleString()}</strong></div>
+    )}
+    {redType !== '' && Number(amt) >= 10 && (
+      <button className="bf-place-btn" onClick={async () => {
+        if (submitting) return;
+        await onSubmit({ __bulk: true, numbers: activeJodis.map(j => ({ num: j, amt: Number(amt) })), totalAmt, session: openClose });
+      }} disabled={submitting} style={{ opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}>
+        {submitting ? '⏳ Placing...' : `🎯 Place All — ₹${totalAmt.toLocaleString()}`}
       </button>
     )}
   </>;
@@ -340,7 +348,11 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const isBulkType = nt==='ank_bulk'||nt==='jodi_bulk'||nt==='pana_bulk'||id==='sp_common'||id==='dp_common'||id==='cycle_jodi'||id==='digit_jodi'||id==='cycle_panna'||id==='crossing_jodi'||id==='family_jodi'||id==='family_pana'||id.includes('half_sangam_bulk')||id.includes('full_sangam_bulk');
 
   const addToBulk = () => {
-    if (id === 'cycle_jodi') {
+    if (id === 'half_sangam_b' && openClose === 'close') {
+      if (!num || !num2 || !amt || Number(amt) < 10) return;
+      setBets(b => [...b, { num: `${num}-${num2}`, amt: Number(amt) }]);
+      setNum(''); setNum2(''); setAmt('');
+    } else if (id === 'cycle_jodi') {
       if (!amt || Number(amt) < 10) return;
       setBets(b => [...b, ...cycleJodis.map(j => ({ num: j, amt: Number(amt) }))]);
       setCycleDigit(null); setAmt('');
@@ -515,8 +527,9 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
             </>
           )}
           <AmtInput amt={amt} setAmt={setAmt} chips={chips}/>
-          <WinInfo/>
-          <PlaceBtn/>
+          <AddBtn label="+ Add to List"/>
+          <BulkTable/>
+          {bets.length > 0 && <PlaceAllBtn/>}
         </>}
         {(id === 'full_sangam' || id === 'full_sangam_bulk') && <>
           <div className="bf-fg">
@@ -535,8 +548,9 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
           </div>
           {(!num || !num2) && <div className="bf-desc-box" style={{background:'rgba(255,165,0,0.1)', color:'#FFA500', border:'1px solid rgba(255,165,0,0.3)'}}>Please select both <strong>Open Pana</strong> and <strong>Close Pana</strong>.</div>}
           <AmtInput amt={amt} setAmt={setAmt} chips={chips}/>
-          <WinInfo/>
-          <PlaceBtn/>
+          <AddBtn label="+ Add to List"/>
+          <BulkTable/>
+          {bets.length > 0 && <PlaceAllBtn/>}
         </>}
 
         {/* ODD / EVEN */}
@@ -550,21 +564,80 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
           </div>
           {oddEven !== '' && (
             <div className="bf-fg">
-              <label className="bf-label">{oddEven === 'ODD' ? 'ODD Numbers (1,3,5,7,9)' : 'EVEN Numbers (0,2,4,6,8)'}</label>
+              <label className="bf-label">{oddEven === 'ODD' ? 'ODD Numbers (1,3,5,7,9)' : 'EVEN Numbers (0,2,4,6,8)'} — Saare select honge</label>
               <div className="bf-num-grid">
                 {(oddEven === 'ODD' ? ODD_NUMBERS : EVEN_NUMBERS).map(n => (
-                  <div key={n} className={`bf-nchip${oddEvenNum === n ? ' active' : ''}`} onClick={() => setOddEvenNum(n)}>{n}</div>
+                  <div key={n} className="bf-nchip active" style={{cursor:'default'}}>{n}</div>
                 ))}
               </div>
             </div>
           )}
-          <AmtInput amt={amt} setAmt={setAmt} chips={chips}/>
-          <WinInfo/>
-          <PlaceBtn/>
+          <AmtInput amt={amt} setAmt={setAmt} chips={chips} label="Amount per Number (Min ₹10)"/>
+          {oddEven !== '' && Number(amt) >= 10 && (
+            <div className="bf-infobox">📊 <strong>5 numbers</strong> × ₹<strong>{amt}</strong> = Total: <strong>₹{(Number(amt)*5).toLocaleString()}</strong></div>
+          )}
+          {oddEven !== '' && Number(amt) >= 10 && (
+            <button className="bf-place-btn" onClick={async () => {
+              if (submitting) return;
+              setSubmitting(true);
+              try {
+                const nums = oddEven === 'ODD' ? ODD_NUMBERS : EVEN_NUMBERS;
+                await onSubmit({ __bulk: true, numbers: nums.map(n => ({ num: String(n), amt: Number(amt) })), totalAmt: Number(amt)*5, session: openClose });
+              } finally {
+                setSubmitting(false);
+              }
+            }} disabled={submitting} style={{opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer'}}>
+              {submitting ? '⏳ Placing...' : `🎯 Place All — ₹${(Number(amt)*5).toLocaleString()}`}
+            </button>
+          )}
         </>}
 
         {/* MOTORS */}
-        {id === 'dp_motor' && <><div className="bf-fg"><label className="bf-label">Pick Pana</label><PanaGrid panas={DOUBLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><AddBtn/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
+        {id === 'dp_motor' && (() => {
+          const parsedDigits = num ? [...new Set(num.replace(/\D/g, '').split('').map(Number))].filter(n => n >= 0 && n <= 9) : [];
+          const dpCombinations = parsedDigits.length >= 3 ? (() => {
+            const result = [];
+            const sorted = [...parsedDigits].sort((a,b) => a-b);
+            for (let i = 0; i < sorted.length; i++)
+              for (let j = i; j < sorted.length; j++)
+                for (let k = j; k < sorted.length; k++) {
+                  if (sorted[i] === sorted[j] || sorted[j] === sorted[k] || sorted[i] === sorted[k]) {
+                    const combo = [sorted[i], sorted[j], sorted[k]].join('');
+                    if (DOUBLE_PANAS.includes(combo)) result.push(combo);
+                  }
+                }
+            return [...new Set(result)].sort();
+          })() : [];
+
+          return <>
+            <div className="bf-fg">
+              <label className="bf-label">🔢 Enter Digits (3 to 10 unique digits)</label>
+              <input className="bf-input" type="text" inputMode="numeric" maxLength={10} placeholder="e.g. 12345" value={num} onChange={e => setNum(e.target.value.replace(/\D/g, '').slice(0, 10))} style={{ letterSpacing: 4, fontSize: 20, fontWeight: 700, textAlign: 'center', marginBottom: 10 }} />
+              {parsedDigits.length > 0 && (<div className="bf-num-grid">{parsedDigits.map(d => (<div key={`dp-${d}`} className="bf-nchip active" style={{ cursor: 'default' }}>{d}</div>))}</div>)}
+              {parsedDigits.length > 0 && parsedDigits.length < 3 && (<div className="bf-desc-box" style={{ background: 'rgba(255,165,0,0.1)', color: '#FFA500', border: '1px solid rgba(255,165,0,0.3)', marginTop: 10 }}>⚠️ Kam se kam <strong>3 unique digits</strong> chahiye</div>)}
+            </div>
+            <AmtInput amt={amt} setAmt={setAmt} chips={chips} label="💰 Amount per Pana (Min ₹10)" />
+            {dpCombinations.length > 0 && (
+              <div className="bf-fg">
+                <label className="bf-label">🎯 Generated Double Panas ({dpCombinations.length})</label>
+                <div className="bf-pana-grid" style={{ maxHeight: '250px', overflowY: 'auto', padding: '5px 0' }}>
+                  {dpCombinations.map(p => (<div key={`dp-gen-${p}`} className="bf-pchip active" style={{ cursor: 'default' }}>{p}</div>))}
+                </div>
+              </div>
+            )}
+            {dpCombinations.length > 0 && Number(amt) >= 10 && (
+              <button className="bf-place-btn" onClick={async () => {
+                if (submitting) return;
+                setSubmitting(true);
+                try {
+                  await onSubmit({ __bulk: true, numbers: dpCombinations.map(p => ({ num: p, amt: Number(amt) })), totalAmt: Number(amt) * dpCombinations.length, session: openClose });
+                } finally { setSubmitting(false); }
+              }} disabled={submitting} style={{ opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}>
+                {submitting ? '⏳ Placing...' : `🎯 Place Bid — ₹${(Number(amt) * dpCombinations.length).toLocaleString()}`}
+              </button>
+            )}
+          </>;
+        })()}
         {id === 'sp_motor' && <SPMotorSection num={num} setNum={setNum} amt={amt} setAmt={setAmt} chips={chips} onSubmit={onSubmit} openClose={openClose} submitting={submitting} />}
 
         {/* RED JODI */}
