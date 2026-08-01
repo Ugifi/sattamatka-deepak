@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-const API = 'https://ziddi-1-we11.onrender.com';
+const API = 'https://sattamatka-deepak-hy1n.onrender.com';
 
 function toIST(dateStr) {
   if (!dateStr) return '';
