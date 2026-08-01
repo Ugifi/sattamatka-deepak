@@ -5,7 +5,7 @@ export default function Drawer({ user, onClose, onNav, onLogout }) {
   const telegramId = "matkaking_support"; // Apna Telegram username daalein
 
   // 🔥 Smart Image Checker Logic 🔥
-  const API_URL = 'https://ziddi-1-we11.onrender.com';
+  const API_URL = 'https://sattamatka-deepak-hy1n.onrender.com';
   const defaultAvatar = "https://api.dicebear.com/7.x/avataaars/svg?seed=Lucky&backgroundColor=ffcc00";
   
   const getAvatarUrl = () => {
