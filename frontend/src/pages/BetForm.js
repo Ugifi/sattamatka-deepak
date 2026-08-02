@@ -759,18 +759,49 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
             </div>
           </div>
           {spDpDigit !== null && CYCLE_PANNA_DATA[spDpDigit] && <>
-            <div className="bf-desc-box" style={{ background: 'rgba(0,255,213,0.08)', color: '#00ffd5', border: '1px solid rgba(0,255,213,0.4)' }}>🎯 <strong>Jodi {spDpDigit}</strong> — <strong>{CYCLE_PANNA_DATA[spDpDigit].length} Panas</strong> available</div>
-            <div className="bf-fg">
-              <label className="bf-label">📋 Cycle Panas ({CYCLE_PANNA_DATA[spDpDigit].length})</label>
-              <div className="bf-pana-grid">
-                {CYCLE_PANNA_DATA[spDpDigit].map(p => (
-                  <div key={p} className={`bf-pchip${num === String(p) ? ' active' : ''}`} onClick={() => setNum(String(p))}>{String(p).padStart(3,'0')}</div>
-                ))}
-              </div>
-            </div>
-            <AmtInput amt={amt} setAmt={setAmt} chips={chips} label="💰 Amount per Pana (Min ₹10)" />
-            {num && Number(amt) >= 10 && (<div className="bf-infobox">📊 Selected: <strong>{String(num).padStart(3,'0')}</strong> | Bid: <strong>₹{Number(amt).toLocaleString()}</strong></div>)}
-            <AddBtn label="+ Add to List" />
+            <div className="bf-desc-box" style={{ background: 'rgba(0,255,213,0.08)', color: '#00ffd5', border: '1px solid rgba(0,255,213,0.4)' }}>🎯 <strong>Jodi {spDpDigit}</strong> — <strong>{CYCLE_PANNA_DATA[spDpDigit].length} Panas</strong> — Saare auto select honge</div>
+            {(() => {
+              const allCyclePanas = CYCLE_PANNA_DATA[spDpDigit].map(p => String(p).padStart(3,'0'));
+              const selectedCycle = num ? num.split(',').filter(Boolean) : allCyclePanas;
+              const setSelectedCycle = (arr) => setNum(arr.join(','));
+              const toggleCyclePana = (p) => {
+                if (selectedCycle.includes(p)) setSelectedCycle(selectedCycle.filter(x => x !== p));
+                else setSelectedCycle([...selectedCycle, p]);
+              };
+              const toggleAllCycle = () => {
+                if (selectedCycle.length === allCyclePanas.length) setSelectedCycle([]);
+                else setSelectedCycle([...allCyclePanas]);
+              };
+              return <>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, gap:8 }}>
+                  <div className="bf-desc-box" style={{ background:'rgba(0,255,213,0.08)', color:'#00ffd5', border:'1px solid rgba(0,255,213,0.4)', margin:0, flex:1 }}>
+                    🎯 <strong>Jodi {spDpDigit}</strong> — <strong>{selectedCycle.length}/{allCyclePanas.length}</strong> Panas selected
+                  </div>
+                  <div onClick={toggleAllCycle} style={{ padding:'8px 12px', background: selectedCycle.length === allCyclePanas.length ? '#e53935' : '#00ffd5', color:'#000', borderRadius:8, fontWeight:700, fontSize:12, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
+                    {selectedCycle.length === allCyclePanas.length ? '✕ Clear' : '✓ All'}
+                  </div>
+                </div>
+                <div className="bf-fg">
+                  <label className="bf-label">📋 Click karke select/deselect karo</label>
+                  <div className="bf-pana-grid">
+                    {allCyclePanas.map(p => (
+                      <div key={p} className={`bf-pchip${selectedCycle.includes(p) ? ' active' : ''}`} onClick={() => toggleCyclePana(p)}>{p}</div>
+                    ))}
+                  </div>
+                </div>
+                {selectedCycle.length === 0 && (<div className="bf-desc-box" style={{ background:'rgba(255,165,0,0.1)', color:'#FFA500', border:'1px solid rgba(255,165,0,0.3)' }}>⚠️ Kam se kam <strong>1 pana</strong> select karo</div>)}
+                {selectedCycle.length > 0 && <AmtInput amt={amt} setAmt={setAmt} chips={chips} label="💰 Amount per Pana (Min ₹10)" />}
+                {selectedCycle.length > 0 && Number(amt) >= 10 && (
+                  <div className="bf-infobox">📊 <strong>{selectedCycle.length} panas</strong> × ₹<strong>{amt}</strong> = Total: <strong>₹{(selectedCycle.length * Number(amt)).toLocaleString()}</strong></div>
+                )}
+                {selectedCycle.length > 0 && Number(amt) >= 10 && (
+                  <button onClick={() => {
+                    setBets(b => [...b, ...selectedCycle.map(p => ({ num: p, amt: Number(amt) }))]);
+                    setSpDpDigit(null); setNum(''); setAmt('');
+                  }} className="bf-add-btn">+ Add to List</button>
+                )}
+              </>;
+            })()}
             <BulkTable />
             {bets.length > 0 && (<button className="bf-place-btn" onClick={handleSubmit} disabled={submitting} style={{ marginTop: 12, opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}>{submitting ? '⏳ Placing...' : `🎯 Place All — ₹${totalAmt.toLocaleString()}`}</button>)}
           </>}
