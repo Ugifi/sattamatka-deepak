@@ -663,7 +663,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
 
           const spPanas = (needsDigit && spDpDigit !== null && hasSP) ? (SP_PANAS_FINAL[spDpDigit] || []) : [];
           const dpPanas = (needsDigit && spDpDigit !== null && hasDP) ? (DP_PANAS[spDpDigit] || []) : [];
-          const tpPanas = hasTP ? TRIPLE_PANAS : [];
+          const tpPanas = hasTP && spDpDigit !== null ? TRIPLE_PANAS.filter(p => Number(p[0]) === spDpDigit) : [];
           const allPanas = [...spPanas, ...dpPanas, ...tpPanas];
           const totalBidAmt = allPanas.length * Number(amt || 0);
 
@@ -680,15 +680,15 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
               </div>
             </div>
 
-            {needsDigit && (
+            {selectedTypes.length === 0 && (
+              <div className="bf-desc-box" style={{background:'rgba(255,165,0,0.1)', color:'#FFA500', border:'1px solid rgba(255,165,0,0.3)'}}>⬆️ Pehle <strong>SP / DP / TP</strong> select karo</div>
+            )}
+
+            {selectedTypes.length > 0 && (
               <div className="bf-fg">
                 <label className="bf-label">🔢 Digit Select Karo (0–9)</label>
                 <NumGrid selected={spDpDigit !== null ? String(spDpDigit) : ''} onSelect={v => { setSpDpDigit(Number(v)); setNum(''); }} />
               </div>
-            )}
-
-            {selectedTypes.length === 0 && (
-              <div className="bf-desc-box" style={{background:'rgba(255,165,0,0.1)', color:'#FFA500', border:'1px solid rgba(255,165,0,0.3)'}}>⬆️ Pehle <strong>SP / DP / TP</strong> select karo</div>
             )}
 
             {needsDigit && spDpDigit === null && (
@@ -713,20 +713,29 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
             {(allPanas.length > 0 || hasTP) && <>
               <AmtInput amt={amt} setAmt={setAmt} chips={chips} label="💰 Amount per Pana (Min ₹10)" />
               {Number(amt) >= 10 && allPanas.length > 0 && (
-                <div className="bf-infobox">📊 <strong>{allPanas.length} panas</strong> × ₹<strong>{amt}</strong> = Total: <strong>₹{totalBidAmt.toLocaleString()}</strong></div>
+                <div className="bf-infobox">📊 <strong>{allPanas.length} panas</strong> × ₹<strong>{amt}</strong> = Total: <strong>₹{(allPanas.length * Number(amt)).toLocaleString()}</strong></div>
               )}
               {Number(amt) >= 10 && allPanas.length > 0 && (
-                <button className="bf-place-btn" onClick={async () => {
-                  if (submitting) return;
-                  setSubmitting(true);
-                  try {
-                    await onSubmit({ __bulk: true, numbers: allPanas.map(p => ({ num: p, amt: Number(amt) })), totalAmt: totalBidAmt, session: openClose });
-                  } finally { setSubmitting(false); }
-                }} disabled={submitting} style={{opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer'}}>
-                  {submitting ? '⏳ Placing...' : `🎯 Place All — ₹${totalBidAmt.toLocaleString()}`}
-                </button>
+                <button onClick={() => {
+                  if (!amt || Number(amt) < 10) return;
+                  setBets(b => [...b, ...allPanas.map(p => ({ num: p, amt: Number(amt) }))]);
+                  setSpDpDigit(null); setNum2(''); setAmt('');
+                }} className="bf-add-btn">+ Add to List</button>
               )}
             </>}
+            <BulkTable/>
+            {bets.length > 0 && (
+              <button className="bf-place-btn" onClick={async () => {
+                if (submitting) return;
+                setSubmitting(true);
+                try {
+                  const total = bets.reduce((a,b) => a + b.amt, 0);
+                  await onSubmit({ __bulk: true, numbers: bets, totalAmt: total, session: openClose });
+                } finally { setSubmitting(false); }
+              }} disabled={submitting} style={{opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer', marginTop: 12}}>
+                {submitting ? '⏳ Placing...' : `🎯 Place All — ₹${bets.reduce((a,b) => a+b.amt, 0).toLocaleString()}`}
+              </button>
+            )}
           </>;
         })()}
 
