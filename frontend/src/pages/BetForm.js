@@ -647,7 +647,88 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         {id === 'cycle_jodi' && <><div className="bf-fg"><label className="bf-label">Pick a Digit to Cycle</label><NumGrid selected={cycleDigit !== null ? String(cycleDigit) : ''} onSelect={v => setCycleDigit(Number(v))} /></div>{cycleDigit !== null && <div className="bf-desc-box">Will add <strong>{cycleJodis.length} jodis</strong>: {cycleJodis.slice(0,6).join(', ')}...</div>}<AmtInput amt={amt} setAmt={setAmt} chips={chips} label="Amount per jodi"/><AddBtn label="+ Add All Cycle Jodis"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
 
         {/* SP DP TP */}
-        {id === 'sp_dp_tp' && <><div className="bf-fg"><label className="bf-label">Select Type</label><div className="bf-session-row" style={{marginBottom:10}}>{['SP','DP','TP'].map(t => (<div key={t} className={`bf-session-btn${num2 === t ? ' active' : ''}`} style={{flex:1, textAlign:'center', padding:'10px 0', fontSize:14, cursor:'pointer'}} onClick={() => { setNum2(t); setNum(''); setSpDpDigit(null); }}>{t}</div>))}</div></div>{(num2 === 'SP' || num2 === 'DP') && (<div className="bf-fg"><label className="bf-label">🔢 Digit Select Karo (0–9)</label><NumGrid selected={spDpDigit !== null ? String(spDpDigit) : ''} onSelect={v => { setSpDpDigit(Number(v)); setNum(''); }} /></div>)}{num2 === 'SP' && spDpDigit !== null && (<div className="bf-fg"><label className="bf-label">Pick Single Pana — Digit {spDpDigit} ({SP_PANAS_FINAL[spDpDigit]?.length} panas)</label><PanaGrid panas={SP_PANAS_FINAL[spDpDigit] || []} selected={num} onSelect={setNum} /></div>)}{num2 === 'DP' && spDpDigit !== null && (<div className="bf-fg"><label className="bf-label">Pick Double Pana — Digit {spDpDigit} ({DP_PANAS[spDpDigit]?.length} panas)</label><PanaGrid panas={DP_PANAS[spDpDigit] || []} selected={num} onSelect={setNum} /></div>)}{num2 === 'TP' && (<div className="bf-fg"><label className="bf-label">Pick Triple Pana</label><PanaGrid panas={TRIPLE_PANAS} selected={num} onSelect={setNum} /></div>)}<AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
+        {id === 'sp_dp_tp' && (() => {
+          const selectedTypes = num2 ? num2.split('+') : [];
+          const toggleType = (t) => {
+            const cur = num2 ? num2.split('+') : [];
+            const idx = cur.indexOf(t);
+            if (idx === -1) setNum2([...cur, t].join('+'));
+            else setNum2(cur.filter(x => x !== t).join('+'));
+            setNum(''); setSpDpDigit(null);
+          };
+          const hasSP = selectedTypes.includes('SP');
+          const hasDP = selectedTypes.includes('DP');
+          const hasTP = selectedTypes.includes('TP');
+          const needsDigit = hasSP || hasDP;
+
+          const spPanas = (needsDigit && spDpDigit !== null && hasSP) ? (SP_PANAS_FINAL[spDpDigit] || []) : [];
+          const dpPanas = (needsDigit && spDpDigit !== null && hasDP) ? (DP_PANAS[spDpDigit] || []) : [];
+          const tpPanas = hasTP ? TRIPLE_PANAS : [];
+          const allPanas = [...spPanas, ...dpPanas, ...tpPanas];
+          const totalBidAmt = allPanas.length * Number(amt || 0);
+
+          return <>
+            <div className="bf-fg">
+              <label className="bf-label">Select Type (Multiple Select Kar Sakte Ho)</label>
+              <div className="bf-session-row" style={{marginBottom:10}}>
+                {['SP','DP','TP'].map(t => (
+                  <div key={t} className={`bf-session-btn${selectedTypes.includes(t) ? ' active' : ''}`}
+                    style={{flex:1, textAlign:'center', padding:'10px 0', fontSize:14, cursor:'pointer'}}
+                    onClick={() => toggleType(t)}>{t}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {needsDigit && (
+              <div className="bf-fg">
+                <label className="bf-label">🔢 Digit Select Karo (0–9)</label>
+                <NumGrid selected={spDpDigit !== null ? String(spDpDigit) : ''} onSelect={v => { setSpDpDigit(Number(v)); setNum(''); }} />
+              </div>
+            )}
+
+            {selectedTypes.length === 0 && (
+              <div className="bf-desc-box" style={{background:'rgba(255,165,0,0.1)', color:'#FFA500', border:'1px solid rgba(255,165,0,0.3)'}}>⬆️ Pehle <strong>SP / DP / TP</strong> select karo</div>
+            )}
+
+            {needsDigit && spDpDigit === null && (
+              <div className="bf-desc-box" style={{background:'rgba(255,165,0,0.1)', color:'#FFA500', border:'1px solid rgba(255,165,0,0.3)'}}>⬆️ Digit select karo</div>
+            )}
+
+            {allPanas.length > 0 && <>
+              <div className="bf-desc-box" style={{background:'rgba(0,255,213,0.08)', color:'#00ffd5', border:'1px solid rgba(0,255,213,0.4)'}}>
+                🎯 Total <strong>{allPanas.length} Panas</strong> selected
+                {hasSP && spDpDigit !== null && <span> &nbsp;|&nbsp; SP: <strong>{spPanas.length}</strong></span>}
+                {hasDP && spDpDigit !== null && <span> &nbsp;|&nbsp; DP: <strong>{dpPanas.length}</strong></span>}
+                {hasTP && <span> &nbsp;|&nbsp; TP: <strong>{tpPanas.length}</strong></span>}
+              </div>
+              <div className="bf-fg">
+                <label className="bf-label">📋 All Panas ({allPanas.length})</label>
+                <div className="bf-pana-grid" style={{maxHeight:'200px', overflowY:'auto'}}>
+                  {allPanas.map((p,i) => (<div key={`${p}-${i}`} className="bf-pchip active" style={{cursor:'default'}}>{p}</div>))}
+                </div>
+              </div>
+            </>}
+
+            {(allPanas.length > 0 || hasTP) && <>
+              <AmtInput amt={amt} setAmt={setAmt} chips={chips} label="💰 Amount per Pana (Min ₹10)" />
+              {Number(amt) >= 10 && allPanas.length > 0 && (
+                <div className="bf-infobox">📊 <strong>{allPanas.length} panas</strong> × ₹<strong>{amt}</strong> = Total: <strong>₹{totalBidAmt.toLocaleString()}</strong></div>
+              )}
+              {Number(amt) >= 10 && allPanas.length > 0 && (
+                <button className="bf-place-btn" onClick={async () => {
+                  if (submitting) return;
+                  setSubmitting(true);
+                  try {
+                    await onSubmit({ __bulk: true, numbers: allPanas.map(p => ({ num: p, amt: Number(amt) })), totalAmt: totalBidAmt, session: openClose });
+                  } finally { setSubmitting(false); }
+                }} disabled={submitting} style={{opacity: submitting ? 0.6 : 1, cursor: submitting ? 'not-allowed' : 'pointer'}}>
+                  {submitting ? '⏳ Placing...' : `🎯 Place All — ₹${totalBidAmt.toLocaleString()}`}
+                </button>
+              )}
+            </>}
+          </>;
+        })()}
 
         {/* TWO DIGIT PANA */}
         {id === 'two_digit_pana' && <><div className="bf-fg"><label className="bf-label">Pick Jodi (2-digit)</label><JodiGrid selected={num} onSelect={setNum} /></div><div className="bf-fg"><label className="bf-label">Pick Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num2} onSelect={setNum2} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
