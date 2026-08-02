@@ -19,10 +19,10 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
   });
 
   const banners = [
-    { bg: 'linear-gradient(135deg, #91f4f0, #1cf3eb)', text: 'DAILY Disawar', sub: 'Win Big Every Day!', emoji: '🏆', eyebrow: 'MATKAKING PRESENTS' },
-    { bg: 'linear-gradient(135deg, #91f4f0, #1cf3eb)', text: '100% SAFE & TRUSTED', sub: 'Instant Withdrawal', emoji: '🔒', eyebrow: 'MATKAKING PRESENTS' },
-    { bg: 'linear-gradient(135deg, #91f4f0, #1cf3eb)', text: 'FAST WITHDRAWAL', sub: 'Instant Money Transfer', emoji: '⚡', eyebrow: 'MATKAKING PRESENTS' },
-    { bg: 'linear-gradient(135deg, #91f4f0, #1cf3eb)', text: 'NEW GAMES ADDED', sub: 'Play & Win Now!', emoji: '🎯', eyebrow: 'MATKAKING PRESENTS' },
+    { bg: 'linear-gradient(135deg, #113a39, #113a39)', text: 'DAILY Disawar', sub: 'Win Big Every Day!', emoji: '🏆', eyebrow: 'MATKAKING PRESENTS' },
+    { bg: 'linear-gradient(135deg, #113a39, #113a39)', text: '100% SAFE & TRUSTED', sub: 'Instant Withdrawal', emoji: '🪙', eyebrow: 'MATKAKING PRESENTS' },
+    { bg: 'linear-gradient(135deg, #113a39, #113a39)', text: 'FAST WITHDRAWAL', sub: 'Instant Money Transfer', emoji: '⚡', eyebrow: 'MATKAKING PRESENTS' },
+    { bg: 'linear-gradient(135deg, #113a39, #113a39)', text: 'NEW GAMES ADDED', sub: 'Play & Win Now!', emoji: '🎯', eyebrow: 'MATKAKING PRESENTS' },
   ];
 
   useEffect(() => {
@@ -141,32 +141,51 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     return `${open}-${jodi}-${close}`;
   };
 
-  // ✅ STATUS LOGIC: Backend cron se reset hoga (2 AM IST)
   const getGameStatus = (g) => {
-    const now = new Date();
-    const currentTime = now.toTimeString().split(' ')[0]; // "HH:MM:SS"
+  const hasOpen  = g.open_result  && String(g.open_result).trim()  !== '';
+  const hasClose = g.close_result && String(g.close_result).trim() !== '';
 
-    const hasOpen = g.open_result && String(g.open_result).trim() !== '';
-    const hasClose = g.close_result && String(g.close_result).trim() !== '';
+  // Dono results aa gaye = band
+  if (hasOpen && hasClose) {
+    return { text: 'Closed for today', canPlay: false };
+  }
 
-    // Dono results aa gaye = band
-    if (hasOpen && hasClose) {
-      return { text: 'Closed for today', canPlay: false };
-    }
+  // ✅ Time comparison — minutes mein convert karke (midnight crossing handle)
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
 
-    // Close time guzar gaya = band
-    if (currentTime >= g.close_time) {
-      return { text: 'Closed for today', canPlay: false };
-    }
-
-    // Open result aa gaya, close abhi baaki
-    if (hasOpen) {
-      return { text: 'Running for close', canPlay: true };
-    }
-
-    // Normal open
-    return { text: 'Market is open', canPlay: true };
+  const toMins = (timeStr) => {
+    if (!timeStr) return 0;
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
   };
+
+  const closeMins = toMins(g.close_time);
+
+  // Reset window: 2:00 AM = 120 mins tak games open rahein
+  // Agar close_time raat ka hai (>= 22:00 = 1320 mins)
+  // aur current time 2 AM se pehle hai (< 120 mins), toh abhi band nahi hui
+  const isLateNightGame = closeMins >= 22 * 60; // 10 PM ke baad close hone wali games
+  const isAfterMidnight = nowMins < 2 * 60;     // 12 AM - 2 AM window
+
+  let isClosed = false;
+  if (isLateNightGame && isAfterMidnight) {
+    // Late night game, abhi 2 AM nahi hua — band nahi karni
+    isClosed = false;
+  } else {
+    isClosed = nowMins >= closeMins;
+  }
+
+  if (isClosed) {
+    return { text: 'Closed for today', canPlay: false };
+  }
+
+  if (hasOpen) {
+    return { text: 'Running for close', canPlay: true };
+  }
+
+  return { text: 'Market is open', canPlay: true };
+};
 
   const formatTime = (timeStr) => {
     if (!timeStr) return '--:--';
