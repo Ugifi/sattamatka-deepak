@@ -1,8 +1,23 @@
 import React from 'react';
 
 export default function Drawer({ user, onClose, onNav, onLogout }) {
-  const whatsappNumber = "919999999999"; // Apna WhatsApp no. daalein
-  const telegramId = "matkaking_support"; // Apna Telegram username daalein
+ const [whatsappNumber, setWhatsappNumber] = React.useState("919999999999");
+const [telegramId, setTelegramId] = React.useState("matkaking_support");
+
+React.useEffect(() => {
+  // apiCall prop se settings fetch karo
+  if (!apiCall) return;
+  apiCall('/api/admin/settings').then(res => {
+    if (res?.success && res?.settings) {
+      const s = res.settings;
+      if (s.phone || s.whatsapp_support) {
+        const num = (s.phone || s.whatsapp_support).replace(/\D/g, '');
+        setWhatsappNumber(num.startsWith('91') ? num : `91${num}`);
+      }
+      if (s.telegram) setTelegramId(s.telegram);
+    }
+  }).catch(() => {});
+}, [apiCall]);
 
   // 🔥 Smart Image Checker Logic 🔥
   const API_URL = 'https://sattamatka-deepak-hy1n.onrender.com';
