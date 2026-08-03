@@ -59,7 +59,7 @@ router.post('/register', [
 
     if (referrerId) {
       await db.query(
-        'INSERT INTO referral_bonuses (referrer_id, joiner_id, bonus_amount, status) VALUES (?, ?, 50, "pending")',
+        'INSERT INTO referral_bonuses (referrer_id, joiner_id, bonus_amount, status) VALUES (?, ?, 0, "pending")',
         [referrerId, newUserId]
       );
     }
