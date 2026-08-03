@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
-
+import ChartPage from './pages/ChartPage';
 import AuthScreen from './components/AuthScreen';
 import Toast from './components/Toast';
 import { DepositModal } from './pages/OtherPages';
@@ -647,6 +647,12 @@ export default function App() {
     else if (id === 'with') setModal('with');
     else { setPage(id); setSelectedGame(null); setSelectedType(null); setTab(id); }
   };
+    const handleViewChart = g => {
+    setSelectedGame(g);
+    setPage('chart');
+    setTab('game');
+    window.scrollTo(0, 0);
+  };
 
   const goBack = () => {
     const cat = selectedGame?.game_category;
@@ -656,7 +662,14 @@ export default function App() {
       else if (cat==='jackpot') { setPage('jackpot'); setSelectedGame(null); }
       else if (cat==='disawar') { setPage('disawar'); setSelectedGame(null); }
       else { setPage('home'); setSelectedGame(null); setTab('game'); }
-    } else { setPage('home'); setTab('game'); }
+    } 
+    else if (page === 'chart') { // <-- NAYA ADDITION
+      if (cat==='starline') { setPage('starline'); setSelectedGame(null); }
+      else if (cat==='jackpot') { setPage('jackpot'); setSelectedGame(null); }
+      else if (cat==='disawar') { setPage('disawar'); setSelectedGame(null); }
+      else { setPage('home'); setSelectedGame(null); setTab('game'); }
+    } 
+    else { setPage('home'); setTab('game'); }
   };
 
   if (isAdmin) {
@@ -677,8 +690,8 @@ export default function App() {
   if (!user) return <AuthScreen onLogin={handleLogin} />;
 
   const isTxnTab  = page === 'txns';
-  const isSubPage = ['game-types','bet-form','starline','disawar','jackpot'].includes(page);
-  const navTitle  = page==='game-types' ? selectedGame?.name : page==='bet-form' ? selectedType?.label : page==='starline' ? 'Matka Starline' : page==='jackpot' ? 'KING JACKPOT' : page==='disawar' ? 'DISAWAR' : null;
+  const isSubPage = ['game-types','bet-form','starline','disawar','jackpot','chart'].includes(page);
+  const navTitle  = page==='game-types' ? selectedGame?.name : page==='bet-form' ? selectedType?.label : page==='starline' ? 'Matka Starline' : page==='jackpot' ? 'KING JACKPOT' : page==='disawar' ? 'DISAWAR' : page==='chart' ? '📊 Chart' : null;
 
   return (
     <>
@@ -738,10 +751,12 @@ export default function App() {
     setTab('game');
     window.scrollTo(0, 0);
     document.documentElement.scrollTop = 0;
-  }} navigate={navigate} apiCall={apiCall} />}
+  }} navigate={navigate} apiCall={apiCall} onViewChart={handleViewChart} />}
       {page === 'profile'    && <ProfileScreen user={user} showToast={showToast} />}
       {page === 'game-types' && <GameTypePage game={selectedGame} onSelect={gt => { setSelectedType(gt); setPage('bet-form'); }} />}
+      
       {page === 'bet-form'   && <BetForm game={selectedGame} gameType={selectedType} wallet={wallet} onSubmit={handleBidSubmit} />}
+            {page === 'chart'     && <ChartPage game={selectedGame} apiCall={apiCall} />}
       {page === 'starline'   && <CategoryGamesScreen category="starline" onPlay={g => { setSelectedGame(g); setPage('game-types'); }} />}
       {page === 'jackpot'    && <CategoryGamesScreen category="jackpot" apiCategory="disawar" onPlay={g => { setSelectedGame(g); setPage('game-types'); }} />}
       {page === 'disawar'    && <CategoryGamesScreen category="disawar" onPlay={g => { setSelectedGame(g); setPage('game-types'); }} />}
