@@ -17,10 +17,8 @@ export default function GameTypePage({ game, onSelect }) {
   background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))',
   minHeight: '100vh', 
   paddingTop: '20px',
-  paddingBottom: '500px',
+  paddingBottom: '80px',
   overscrollBehavior: 'none',
-  transform: 'translateZ(0)',
-  WebkitTransform: 'translateZ(0)'
 }}>
       
       {/* Game Name Banner (Bigger & Yellow) */}
