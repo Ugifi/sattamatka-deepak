@@ -471,6 +471,42 @@ router.get('/results/history', async (req, res) => {
   }
 });
 
+// ─── GAME CHART DATA ─────────────────────────────────────────────────────────
+router.get('/:id/chart', async (req, res) => {
+  try {
+    // ⚠️ ID ko hamesha Integer mein convert karo, warna MySQL blank return karega
+    const gameId = parseInt(req.params.id); 
+    const days = parseInt(req.query.days) || 60;
+
+    if (isNaN(gameId)) {
+      return res.status(400).json({ success: false, message: 'Invalid Game ID' });
+    }
+
+    // game_results table se fetch karna hai
+    const [results] = await db.query(
+      `SELECT result_date, open_result, close_result, jodi_result 
+       FROM game_results 
+       WHERE game_id = ? AND jodi_result IS NOT NULL
+       ORDER BY result_date DESC 
+       LIMIT ?`,
+      [gameId, days]
+    );
+
+    const chartData = results.map(r => ({
+      date: r.result_date,
+      day: new Date(r.result_date).toLocaleDateString('en-US', { weekday: 'short' }),
+      open: r.open_result || '***',
+      close: r.close_result || '***',
+      jodi: r.jodi_result || '**'
+    }));
+
+    res.json({ success: true, data: chartData });
+  } catch (err) {
+    console.error('Chart fetch error:', err);
+    res.status(500).json({ success: false, message: 'Server error', error: err.message });
+  }
+});
+
 // ─── GET SINGLE GAME ──────────────────────────────────────────────────────────
 router.get('/:id', async (req, res) => {
   try {
