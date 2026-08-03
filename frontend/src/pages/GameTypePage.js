@@ -8,35 +8,9 @@ export default function GameTypePage({ game, onSelect }) {
 
   // 🔥 Wave Animation Generator for Labels 🔥
   const renderWaveText = (text) => {
-    if (!text) return null;
-    let charIndex = 0;
-    
-    return text.split(' ').map((word, wIdx, arr) => (
-      <React.Fragment key={wIdx}>
-        {word.split('').map((char) => {
-          const currentDelay = `${charIndex * 0.1}s`;
-          charIndex++;
-          return (
-            <span 
-              key={charIndex} 
-             style={{ 
-  display: 'inline-block', 
-  animation: 'wave 1.5s infinite', 
-  animationDelay: currentDelay,
-  willChange: 'transform',
-  backfaceVisibility: 'hidden',
-  WebkitBackfaceVisibility: 'hidden'
-}}
-            >
-              {char}
-            </span>
-          );
-        })}
-        {/* ✅ FIX: Added a breakable space span between words so they wrap to next line */}
-        {wIdx < arr.length - 1 && <span style={{ display: 'inline-block', width: '4px' }}>&nbsp;</span>}
-      </React.Fragment>
-    ));
-  };
+  if (!text) return null;
+  return text;
+};
 
   return (
       <div className="game-type-page screen" style={{ 
