@@ -29,11 +29,12 @@ body{
   font-family:'Rajdhani',sans-serif;
   min-height:100vh;
   overflow-x:hidden;
+  overflow-y:auto;
   background:radial-gradient(ellipse 140% 80% at 50% 0%,#0d2e1a 0%,#050f05 55%,#000 100%);
   color:#fff;
   user-select:none;
 }
-#root{max-width:430px;margin:0 auto;min-height:100vh;position:relative;background:transparent}
+#root{max-width:430px;margin:0 auto;min-height:100vh;position:relative;background:transparent;overflow-y:auto;}
 
 /* ══════════════════════════════════════════
    TOP NAV
