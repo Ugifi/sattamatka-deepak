@@ -117,6 +117,12 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     let openRes = g.open_result;
     let closeRes = g.close_result;
 
+    // 1 AM ke baad results hide karo (reset time)
+    const nowH = new Date().getHours();
+    if (nowH >= 1 && nowH < 6) {
+      return '***-**-***';
+    }
+
     if (openRes && !isTimePassed(g.open_time, 30)) {
       openRes = null;
     }
