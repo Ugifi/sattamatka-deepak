@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { DepositModal } from './OtherPages';
 
-export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, apiCall }) {
+
+export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, apiCall, onViewChart }) {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -339,6 +340,14 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
                       {status.canPlay && <span className="rotate-icon" style={{ fontSize: 12 }}>◀</span>}
                       {status.canPlay ? 'PLAY NOW' : 'MARKET CLOSED'}
                     </button>
+
+                     {/* 📊 CHART BUTTON - NEW */}
+                    <button 
+                      onClick={() => onViewChart(g)}
+                      style={{ width: '100%', padding: '8px', border: '1.5px solid rgba(0,255,213,0.4)', borderRadius: '10px', background: 'rgba(0,255,213,0.08)', color: '#00ffd5', fontWeight: 800, fontSize: 12, cursor: 'pointer', marginTop: 8, letterSpacing: 1, textTransform: 'uppercase' }}
+                    >
+                      📊 VIEW CHART
+                    </button>
                   </div>
                 </div>
               );
@@ -670,6 +679,14 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
                     {status.canPlay && <span className="rotate-icon" style={{ fontSize: 12 }}>◀</span>}
                     {status.canPlay ? 'PLAY NOW' : 'MARKET CLOSED'}
                   </button>
+                     {/* 📊 CHART BUTTON - NEW */}
+                  <button 
+                    onClick={() => onViewChart(g)}
+                    style={{ width: '100%', padding: '8px', border: '1.5px solid rgba(0,255,213,0.4)', borderRadius: '10px', background: 'rgba(0,255,213,0.08)', color: '#00ffd5', fontWeight: 800, fontSize: 12, cursor: 'pointer', marginTop: 8, letterSpacing: 1, textTransform: 'uppercase' }}
+                  >
+                    📊 VIEW CHART
+                  </button>
+
                 </div>
               </div>
             );
