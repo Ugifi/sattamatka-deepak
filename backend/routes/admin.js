@@ -315,7 +315,8 @@ router.put('/deposits/:id', [
   body('action').isIn(['approve', 'reject'])
 ], async (req, res) => {
   const { action, note } = req.body;
-  const REFERRAL_BONUS = 50; // ₹50 dono ko
+  const depositAmount = dep.amount;
+  const REFERRAL_BONUS = depositAmount >= 500 ? Math.floor(depositAmount * 0.05) : 0; // 5% only if deposit >= 500
 
   const conn = await db.getConnection();
   try {
@@ -354,29 +355,21 @@ router.put('/deposits/:id', [
       if (pendingBonus.length) {
         const bonus = pendingBonus[0];
 
-        await conn.query(
-          'UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?',
-          [REFERRAL_BONUS, bonus.referrer_id]
-        );
-        await conn.query(
-          `INSERT INTO transactions (user_id, type, wallet_type, amount, description, status)
-           VALUES (?, 'credit', 'wallet', ?, 'Referral bonus - friend ne deposit kiya', 'completed')`,
-          [bonus.referrer_id, REFERRAL_BONUS]
-        );
+        if (REFERRAL_BONUS > 0) {
+          await conn.query(
+            'UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?',
+            [REFERRAL_BONUS, bonus.referrer_id]
+          );
+          await conn.query(
+            `INSERT INTO transactions (user_id, type, wallet_type, amount, description, status)
+             VALUES (?, 'credit', 'wallet', ?, 'Referral bonus 5% - friend ne deposit kiya', 'completed')`,
+            [bonus.referrer_id, REFERRAL_BONUS]
+          );
+        }
 
         await conn.query(
-          'UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?',
-          [REFERRAL_BONUS, dep.user_id]
-        );
-        await conn.query(
-          `INSERT INTO transactions (user_id, type, wallet_type, amount, description, status)
-           VALUES (?, 'credit', 'wallet', ?, 'Referral joining bonus', 'completed')`,
-          [dep.user_id, REFERRAL_BONUS]
-        );
-
-        await conn.query(
-          "UPDATE referral_bonuses SET status = 'credited', credited_at = NOW() WHERE id = ?",
-          [bonus.id]
+          "UPDATE referral_bonuses SET status = 'credited', bonus_amount = ?, credited_at = NOW() WHERE id = ?",
+          [REFERRAL_BONUS, bonus.id]
         );
       }
     }
