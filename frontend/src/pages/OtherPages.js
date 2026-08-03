@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Browser } from '@capacitor/browser';
 
 // ── DARK NEON THEME SHARED STYLES ──
 const B = {
@@ -613,8 +614,7 @@ export function BidsPage({ apiCall }) {
                 <div style={{ width: 40, height: 40, background: 'rgba(0,255,213,0.05)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0, border: '1px solid rgba(0,255,213,0.1)' }}>🎯</div>
                 <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
                   <div style={{ fontWeight: 800, fontSize: 14, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.game_name} — {b.game_type}</div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>#{b.number} · <span style={{ background: b.session === 'open' ? 'rgba(0,255,213,0.1)' : 'rgba(255,255,255,0.05)', color: b.session === 'open' ? '#00ffd5' : '#FFA500', fontWeight: 800, padding: '2px 7px', borderRadius: 6, fontSize: 10, textTransform: 'uppercase' }}>{b.session || 'N/A'}</span> · {new Date(b.created_at).toLocaleString('en-IN')}</div>
-                </div>
+<div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>#{b.number} · <span style={{ background: b.session === 'open' ? 'rgba(0,255,213,0.1)' : 'rgba(255,255,255,0.05)', color: b.session === 'open' ? '#00ffd5' : '#FFA500', fontWeight: 800, padding: '2px 7px', borderRadius: 6, fontSize: 10, textTransform: 'uppercase' }}>{b.session || 'N/A'}</span> · {(() => { try { let str = String(b.created_at); if (!str.includes('T') && str.includes(' ')) str = str.replace(' ', 'T') + 'Z'; return new Date(str).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }); } catch(e) { return b.created_at; } })()}</div>                </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <div style={{ fontWeight: 900, fontSize: 15, color: clr, marginBottom: 4 }}>
                     {b.status === 'win' ? `+₹${winning.toLocaleString('en-IN')}` : `₹${amount.toLocaleString('en-IN')}`}
@@ -748,7 +748,14 @@ export function TxnsPage({ apiCall, navigate }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 800, color: '#fff', fontSize: 14, marginBottom: 3 }}>{typeLabel(tx.type)}</div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.description || tx.note || '—'}</div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>{tx.created_at ? new Date(tx.created_at).toLocaleString('en-IN') : '—'}</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>{tx.created_at ? (() => {
+  try {
+    let str = String(tx.created_at);
+    if (!str.includes('T') && str.includes(' ')) str = str.replace(' ', 'T') + 'Z';
+    else if (str.includes('T') && !str.includes('+') && !str.endsWith('Z')) str = str + 'Z';
+    return new Date(str).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+  } catch(e) { return tx.created_at; }
+})() : '—'}</div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <div style={{ fontWeight: 900, fontSize: 15, color: credit ? '#00cc44' : '#ff2244' }}>{credit ? '+' : '-'}₹{amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
