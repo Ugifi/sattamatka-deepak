@@ -1233,7 +1233,7 @@ export function SupportPage({ apiCall, user }) {
             </button>
           </div>
           <div style={{ fontSize: 11, color: '#FFD700', marginTop: 10, fontWeight: 700, textAlign: 'center' }}>
-            👥 Share → Friend joins → Both get ₹50 bonus!
+          
           </div>
         </div>
       )}
@@ -1241,20 +1241,6 @@ export function SupportPage({ apiCall, user }) {
       <div style={B.card}>
         {successMsg && <div style={{ background: 'rgba(0,204,68,0.1)', border: '1px solid rgba(0,204,68,0.3)', borderRadius: 10, padding: '12px', marginBottom: 16, color: '#00cc44', fontSize: 13, fontWeight: 700 }}>{successMsg}</div>}
         {errorMsg   && <div style={{ background: 'rgba(255,34,68,0.1)', border: '1px solid rgba(255,34,68,0.3)', borderRadius: 10, padding: '12px', marginBottom: 16, color: '#ff2244', fontSize: 13, fontWeight: 700 }}>{errorMsg}</div>}
-        <label style={B.label}>Full Name</label>
-        <input style={B.input} value={profileForm.username} onChange={e => setProfileForm(p => ({ ...p, username: e.target.value }))} placeholder="Enter your name" />
-        <div style={{ borderTop: '1px solid rgba(0,255,213,0.1)', paddingTop: 20, marginTop: 8 }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: '#00ffd5', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16, fontFamily: "'Teko', sans-serif" }}>🔐 Change Password (Optional)</div>
-          <label style={B.label}>Current Password</label>
-          <input type="password" style={B.input} placeholder="Current password" value={profileForm.oldPassword} onChange={e => setProfileForm(p => ({ ...p, oldPassword: e.target.value }))} />
-          <label style={B.label}>New Password</label>
-          <input type="password" style={B.input} placeholder="New password (min 6 characters)" value={profileForm.newPassword} onChange={e => setProfileForm(p => ({ ...p, newPassword: e.target.value }))} />
-          <label style={B.label}>Confirm New Password</label>
-          <input type="password" style={{ ...B.input, marginBottom: 0 }} placeholder="Confirm new password" value={profileForm.confirmPassword} onChange={e => setProfileForm(p => ({ ...p, confirmPassword: e.target.value }))} />
-        </div>
-        <button onClick={updateProfile} disabled={loading} style={{ ...B.btn, marginTop: 20, opacity: loading ? 0.6 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}>
-          {loading ? '⏳ Updating...' : '💾 UPDATE PROFILE'}
-        </button>
       </div>
 
       <div style={{ margin: '0 12px', background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', borderRadius: 16, border: '1px solid rgba(0,255,213,0.15)', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.4)' }}>
