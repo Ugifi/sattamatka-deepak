@@ -64,6 +64,9 @@ export const api = {
   resultsHistory: () =>
     fetch(`${API_URL}/games/results/history`).then(r => r.json()),
 
+    gameChart: (id, days = 60) =>
+    fetch(`${API_URL}/games/${id}/chart?days=${days}`, { headers: getHeaders() }).then(r => r.json()),
+
   // ── WALLET ────────────────────────────────────────────────────
   balance: () =>
     fetch(`${API_URL}/wallet/balance`, { headers: getHeaders() }).then(r => r.json()),
