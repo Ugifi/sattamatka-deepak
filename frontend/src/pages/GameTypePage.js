@@ -19,11 +19,14 @@ export default function GameTypePage({ game, onSelect }) {
           return (
             <span 
               key={charIndex} 
-              style={{ 
-                display: 'inline-block', 
-                animation: 'wave 1.5s infinite', 
-                animationDelay: currentDelay 
-              }}
+             style={{ 
+  display: 'inline-block', 
+  animation: 'wave 1.5s infinite', 
+  animationDelay: currentDelay,
+  willChange: 'transform',
+  backfaceVisibility: 'hidden',
+  WebkitBackfaceVisibility: 'hidden'
+}}
             >
               {char}
             </span>
@@ -37,10 +40,15 @@ export default function GameTypePage({ game, onSelect }) {
 
   return (
       <div className="game-type-page screen" style={{ 
-      background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', // ✅ Box wala color yahan paste kar diya
-      minHeight: '100vh', 
-      paddingTop: '20px' 
-    }}>
+  background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))',
+  minHeight: '100vh', 
+  paddingTop: '20px',
+  overflowY: 'auto',
+  WebkitOverflowScrolling: 'touch',
+  overscrollBehavior: 'none',
+  transform: 'translateZ(0)',
+  WebkitTransform: 'translateZ(0)'
+}}>
       
       {/* Game Name Banner (Bigger & Yellow) */}
       {game && (
@@ -122,10 +130,10 @@ export default function GameTypePage({ game, onSelect }) {
           0% { background-position: 200% 0; }
           100% { background-position: -200% 0; }
         }
-        @keyframes wave {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-4px); }
-        }
+       @keyframes wave {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-3px); }
+}
         .gc-name::after {
           content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
           background: linear-gradient(120deg, transparent, rgba(255,255,255,0.7), transparent);
