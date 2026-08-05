@@ -73,7 +73,33 @@ router.get('/', async (req, res) => {
 
     query += ' ORDER BY open_time ASC';
 
-    const [games] = await db.query(query, params);
+  const [games] = await db.query(query, params);
+
+    // ✅ Sirf Disawar games ke liye prev_jodi_result add karo
+    const prevDate = (() => {
+      const d = new Date(matkaDate);
+      d.setDate(d.getDate() - 1);
+      return d.toISOString().split('T')[0];
+    })();
+
+    const disawarIds = games
+      .filter(g => g.game_category === 'disawar')
+      .map(g => g.id);
+
+    if (disawarIds.length > 0) {
+      const [prevResults] = await db.query(
+        `SELECT game_id, jodi_result FROM game_results 
+         WHERE game_id IN (?) AND result_date = ?`,
+        [disawarIds, prevDate]
+      );
+      const prevMap = {};
+      prevResults.forEach(r => { prevMap[r.game_id] = r.jodi_result; });
+      games.forEach(g => {
+        if (g.game_category === 'disawar') {
+          g.prev_jodi_result = prevMap[g.id] || null;
+        }
+      });
+    }
 
     const gameTypes = Object.entries(GAME_TYPES).map(([key, val]) => ({
       type: key, ...val
@@ -125,10 +151,10 @@ router.post('/bid', authMiddleware, [
     const now = new Date();
     const currentTime = now.toTimeString().split(' ')[0];
 
-    if (session === 'open' && currentTime >= game.open_time) {
-      await conn.rollback();
-      return res.status(400).json({ success: false, message: 'Open Betting Time is Over!' });
-    }
+    if (session === 'open' && currentTime >= game.open_time && game.game_category !== 'disawar') {
+  await conn.rollback();
+  return res.status(400).json({ success: false, message: 'Open Betting Time is Over!' });
+}
     if (session === 'close' && currentTime >= game.close_time) {
       await conn.rollback();
       return res.status(400).json({ success: false, message: 'Close Betting Time is Over!' });
@@ -302,10 +328,10 @@ router.post('/bid/bulk', authMiddleware, async (req, res) => {
     const currentTime = now.toTimeString().split(' ')[0];
     const matkaDate = getMatkaDate();
 
-    if (session === 'open' && currentTime >= game.open_time) {
-      await conn.rollback();
-      return res.status(400).json({ success: false, message: 'Open Betting Time is Over!' });
-    }
+    if (session === 'open' && currentTime >= game.open_time && game.game_category !== 'disawar') {
+  await conn.rollback();
+  return res.status(400).json({ success: false, message: 'Open Betting Time is Over!' });
+}
     if (session === 'close' && currentTime >= game.close_time) {
       await conn.rollback();
       return res.status(400).json({ success: false, message: 'Close Betting Time is Over!' });
