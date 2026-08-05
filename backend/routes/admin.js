@@ -196,6 +196,14 @@ router.put('/games/:id/result', [body('open_result').notEmpty().withMessage('Ope
       [open_result, close_result, jodi_result, gameId]
     );
 
+    // ✅ game_results table mein bhi save karo (yesterday's jodi ke liye)
+    await conn.query(
+      `INSERT INTO game_results (game_id, result_date, open_result, close_result, jodi_result, result_source)
+       VALUES (?, CURDATE(), ?, ?, ?, 'manual')
+       ON DUPLICATE KEY UPDATE open_result=?, close_result=?, jodi_result=?`,
+      [gameId, open_result, close_result, jodi_result, open_result, close_result, jodi_result]
+    );
+
     const [bids] = await conn.query("SELECT * FROM bids WHERE game_id = ? AND status = 'pending'", [gameId]);
 
     const GAME_PAYOUTS = {
