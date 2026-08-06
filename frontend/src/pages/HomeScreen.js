@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { DepositModal } from './OtherPages';
 
 
-export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, apiCall, onViewChart }) {
+export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, apiCall, onViewChart, openDisawar, onDisawarOpened }) {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [disawarGames, setDisawarGames] = useState([]);
   const [showDisawar, setShowDisawar] = useState(false);
+const [selectedDisawarGame, setSelectedDisawarGame] = useState(null);
   const [showDeposit, setShowDeposit] = useState(false);
   const [tooltipInfo, setTooltipInfo] = useState(null);
 
@@ -18,6 +19,13 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     phone: '9999999999',
     ticker_text: '',
   });
+
+const DISAWAR_GAME_TYPES = [
+  { id: 'single_digit',       label: 'Left Digit',  icon: '🎯', desc: 'Open result digit', win: 9,  numType: 'ank'      },
+  { id: 'single_digit_close', label: 'Right Digit', icon: '🎰', desc: 'Close result digit', win: 9,  numType: 'ank'      },
+  { id: 'jodi_digit',         label: 'Jodi',        icon: '🎲', desc: 'Two digit pair',     win: 90, numType: 'jodi'     },
+  { id: 'jodi_bulk',          label: 'Jodi Bulk',   icon: '📦', desc: 'Multiple Jodis',     win: 90, numType: 'jodi_bulk'},
+];
 
   const banners = [
     { bg: 'linear-gradient(135deg, #113a39, #113a39)', text: 'DAILY Disawar', sub: 'Win Big Every Day!', emoji: '🏆', eyebrow: 'MATKAKING PRESENTS' },
@@ -30,6 +38,14 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     const timer = setInterval(() => setCurrentSlide(s => (s + 1) % banners.length), 3000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (openDisawar) {
+      setShowDisawar(true);
+      setSelectedDisawarGame(null);
+      if (onDisawarOpened) onDisawarOpened();
+    }
+  }, [openDisawar]);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -147,6 +163,59 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
 
     return `${open}-${jodi}-${close}`;
   };
+   
+// ── DISAWAR RESULT — sirf jodi (2 digit) dikhao ──────────────────
+  const formatDisawarResult = (g) => {
+    const nowH = new Date().getHours();
+    if (nowH >= 1 && nowH < 6) return '**';
+
+    // ✅ Pehle jodi_result check karo (scraper yahi save karta hai)
+    const jodiRes = g.jodi_result;
+    if (jodiRes && String(jodiRes).trim() !== '') {
+      const j = String(jodiRes).replace(/[^0-9]/g, '');
+      if (/^\d{2}$/.test(j)) return j;
+    }
+
+    // ✅ Fallback: close_result se nikalo
+    const closeRes = g.close_result;
+    if (!closeRes || !isTimePassed(g.close_time, 30)) return '**';
+    const cleaned = String(closeRes).replace(/[^0-9]/g, '');
+    if (/^\d{2}$/.test(cleaned)) return cleaned;
+
+    // ✅ Fallback: open + close digit se jodi banao
+    const openRes = g.open_result;
+    if (openRes && closeRes) {
+      const od = String(openRes).split('').reduce((s, c) => s + parseInt(c), 0) % 10;
+      const cd = String(closeRes).split('').reduce((s, c) => s + parseInt(c), 0) % 10;
+      return `${od}${cd}`;
+    }
+
+    return '**';
+  };
+
+// ── DISAWAR STATUS — sirf close time dekho ───────────────────────
+  const getDisawarStatus = (g) => {
+    const hasClose = g.close_result && String(g.close_result).trim() !== '';
+    if (hasClose) return { text: 'Closed for today', canPlay: false };
+    const now = new Date();
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    const toMins = (timeStr) => {
+      if (!timeStr) return 0;
+      const [h, m] = timeStr.split(':').map(Number);
+      return h * 60 + m;
+    };
+    const closeMins = toMins(g.close_time);
+    const isNextDay = closeMins < 6 * 60;
+    let isClosed = false;
+    if (isNextDay) {
+      isClosed = nowMins >= closeMins && nowMins < 6 * 60;
+    } else {
+      isClosed = nowMins >= closeMins;
+    }
+    if (isClosed) return { text: 'Closed for today', canPlay: false };
+    return { text: 'Market is open', canPlay: true };
+  };
+
 
   const getGameStatus = (g) => {
   const hasOpen  = g.open_result  && String(g.open_result).trim()  !== '';
@@ -261,7 +330,67 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
   };
 
   // ── DISAWAR PAGE ──────────────────────────────────────────────
-  if (showDisawar) {
+  // ── DISAWAR GAME TYPE SELECTION ───────────────────────────────
+if (selectedDisawarGame) {
+  return (
+    <div className="screen" style={{ paddingBottom: 80, backgroundColor: '#021a14', minHeight: '100vh', color: '#fff', fontFamily: "'Poppins', sans-serif" }}>
+      <style>{`
+        @keyframes sweepRTL { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+        .anim-in { animation: fadeInUp 0.35s ease both; }
+        .dgt-cell { transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; }
+        .dgt-cell:hover { transform: translateY(-3px) scale(1.02); border-color: rgba(0,255,213,0.5) !important; box-shadow: 0 0 20px rgba(0,255,213,0.15) !important; }
+      `}</style>
+
+      <div style={{ background: 'linear-gradient(135deg, #1a3a6e, #2356b0)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 100 }}>
+        <button onClick={() => setSelectedDisawarGame(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>{selectedDisawarGame.name}</div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>Game Type Select Karo</div>
+        </div>
+      </div>
+
+      <div style={{ textAlign: 'center', padding: '24px 16px 8px' }}>
+        <div style={{ fontFamily: "'Poppins', sans-serif", fontSize: 28, fontWeight: 900, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 3, textShadow: '0 0 20px rgba(255,215,0,0.6)' }}>
+          {selectedDisawarGame.name}
+        </div>
+      </div>
+
+      <div style={{ padding: '8px 14px 4px' }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#00ffd5', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, borderLeft: '3px solid #00ffd5', paddingLeft: 10 }}>Digit Games</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+          {DISAWAR_GAME_TYPES.slice(0, 2).map((gt, i) => (
+            <div key={i} className="dgt-cell anim-in" style={{ animationDelay: `${i * 0.05}s`, background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', padding: '28px 12px', borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1px solid rgba(0,255,213,0.15)', boxShadow: '0 4px 15px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }}
+              onClick={() => onPlay(selectedDisawarGame, gt)}>
+              <div style={{ position: 'absolute', inset: 0, padding: 1.5, borderRadius: 14, background: 'linear-gradient(90deg, transparent 30%, rgba(0,255,213,0.6) 50%, transparent 70%)', backgroundSize: '250% 100%', animation: 'sweepRTL 2.8s linear infinite', WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude', pointerEvents: 'none' }} />
+              <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(0,255,213,0.05)', border: '1.5px solid rgba(0,255,213,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, marginBottom: 12 }}>{gt.icon}</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#FFD700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{gt.label}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>{gt.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#00ffd5', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, borderLeft: '3px solid #00ffd5', paddingLeft: 10 }}>Jodi Games</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {DISAWAR_GAME_TYPES.slice(2, 4).map((gt, i) => (
+            <div key={i} className="dgt-cell anim-in" style={{ animationDelay: `${(i+2) * 0.05}s`, background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', padding: '28px 12px', borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1px solid rgba(0,255,213,0.15)', boxShadow: '0 4px 15px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }}
+              onClick={() => onPlay(selectedDisawarGame, gt)}>
+              <div style={{ position: 'absolute', inset: 0, padding: 1.5, borderRadius: 14, background: 'linear-gradient(90deg, transparent 30%, rgba(0,255,213,0.6) 50%, transparent 70%)', backgroundSize: '250% 100%', animation: 'sweepRTL 2.8s linear infinite', WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude', pointerEvents: 'none' }} />
+              <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(0,255,213,0.05)', border: '1.5px solid rgba(0,255,213,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, marginBottom: 12 }}>{gt.icon}</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#FFD700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{gt.label}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>{gt.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── DISAWAR PAGE ──────────────────────────────────────────
+if (showDisawar) {
     return (
       <div className="screen" style={{ paddingBottom: 80, backgroundColor: '#021a14', minHeight: '100vh', color: '#fff', fontFamily: "'Poppins', sans-serif" }}>
         {/* ✅ BACK TO ADMIN BUTTON */}
@@ -315,13 +444,14 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
             </div>
           ) : (
             disawarGames.map((g) => {
-              const status = getGameStatus(g);
+const status = getDisawarStatus(g);
               return (
                 <div key={g.id} className="game-wrapper">
                   <div className="game-card-content">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ fontSize: 10, color: '#00ffd5', fontWeight: 800, background: 'rgba(0,255,213,0.1)', padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(0,255,213,0.3)' }}>{g.open_time}</div>
-                      <div style={{ fontSize: 10, color: '#00ffd5', fontWeight: 800, background: 'rgba(0,255,213,0.1)', padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(0,255,213,0.3)' }}>{g.close_time}</div>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      <div style={{ fontSize: 11, color: '#00ffd5', fontWeight: 800, background: 'rgba(0,255,213,0.1)', padding: '3px 12px', borderRadius: 4, border: '1px solid rgba(0,255,213,0.3)' }}>
+                        🕐 Close: {formatTime(g.close_time)}
+                      </div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
                       <div className="gc-name">
@@ -329,17 +459,34 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
                         {renderWaveText(g.name)}
                       </div>
                     </div>
-                    <div className="result-number" style={{ textAlign: 'center', fontSize: 24, fontWeight: 900, color: '#00ffd5', margin: '4px 0 8px 0', letterSpacing: '3px', fontFamily: "'Orbitron', sans-serif" }}>
-                      {formatResult(g)}
-                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', margin: '8px 0', gap: 8 }}>
+  {/* Yesterday's Jodi */}
+  <div style={{ flex: 1, textAlign: 'center' }}>
+    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>YESTERDAY'S JODI</div>
+    <div style={{ fontSize: 15, fontWeight: 900, color: 'rgba(0,255,213,0.5)', letterSpacing: 2, fontFamily: "'Orbitron', sans-serif" }}>
+      {g.prev_jodi_result || g.yesterday_jodi || '--'}
+    </div>
+  </div>
+
+  {/* Divider */}
+  <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.15)' }} />
+
+  {/* Today's Jodi */}
+  <div style={{ flex: 1, textAlign: 'center' }}>
+    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>TODAY'S JODI</div>
+    <div className="result-number" style={{ fontSize: 15, fontWeight: 900, color: '#00ffd5', letterSpacing: 2, fontFamily: "'Orbitron', sans-serif" }}>
+      {formatDisawarResult(g)}
+    </div>
+  </div>
+</div>
                     <div style={{ fontSize: 10, color: status.canPlay ? '#00cc44' : '#ff2244', fontWeight: 800, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, letterSpacing: 2 }}>
                       <span style={{ width: 7, height: 7, background: status.canPlay ? '#00cc44' : '#ff2244', borderRadius: '50%', display: 'inline-block', boxShadow: status.canPlay ? '0 0 6px #00cc44' : '0 0 6px #ff2244' }}></span>
                       {status.text.toUpperCase()}
                     </div>
-                    <button onClick={() => status.canPlay && onPlay(g)} disabled={!status.canPlay} className={status.canPlay ? 'play-btn-active' : 'play-btn-disabled'}>
-                      {status.canPlay && <span className="rotate-icon" style={{ fontSize: 12 }}>◀</span>}
-                      {status.canPlay ? 'PLAY NOW' : 'MARKET CLOSED'}
-                    </button>
+                    <button onClick={() => status.canPlay && setSelectedDisawarGame(g)} disabled={!status.canPlay} className={status.canPlay ? 'play-btn-active' : 'play-btn-disabled'}>
+  {status.canPlay && <span className="rotate-icon" style={{ fontSize: 12 }}>◀</span>}
+  {status.canPlay ? 'PLAY NOW' : 'MARKET CLOSED'}
+</button>
 
                      {/* 📊 CHART BUTTON - NEW */}
                     <button 
@@ -671,11 +818,11 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
                   </div>
 
                   {/* PLAY BUTTON */}
-                  <button 
-                    onClick={() => status.canPlay && onPlay(g)} 
-                    disabled={!status.canPlay} 
-                    className={status.canPlay ? 'play-btn-active' : 'play-btn-disabled'}
-                  >
+                 <button 
+    onClick={() => status.canPlay && onPlay(g)} 
+    disabled={!status.canPlay} 
+    className={status.canPlay ? 'play-btn-active' : 'play-btn-disabled'}
+  >
                     {status.canPlay && <span className="rotate-icon" style={{ fontSize: 12 }}>◀</span>}
                     {status.canPlay ? 'PLAY NOW' : 'MARKET CLOSED'}
                   </button>
