@@ -322,8 +322,10 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
 
   // ── SESSION LOGIC ────────────────────────────────────────────
   const openDeclared  = !!game.open_result;
-  const closeDeclared = !!game.close_result;
-  const defaultSession = openDeclared ? 'close' : 'open';
+const closeDeclared = !!game.close_result;
+const isCloseType = gameType.id === 'single_digit_close';
+const isDisawarType = ['single_digit', 'single_digit_close', 'jodi_digit', 'jodi_bulk'].includes(gameType.id);
+const defaultSession = (openDeclared || isCloseType || isDisawarType) ? 'close' : 'open';
   const [openClose, setOpenClose] = useState(defaultSession);
 
   const getCycleJodis = (d) => {
@@ -376,8 +378,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
 
   const handleSubmit = async () => {
     if (submitting) return;
-    if (openDeclared && openClose === 'open') {
-      alert('Open result declare ho chuka hai. Sirf CLOSE session pe bet laga sakte ho.');
+if (!isDisawarType && openDeclared && openClose === 'open') {      alert('Open result declare ho chuka hai. Sirf CLOSE session pe bet laga sakte ho.');
       return;
     }
     if (openDeclared && closeDeclared) {
@@ -497,10 +498,8 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         <div className="bf-title">🎯 {gameType.label}</div>
         <div className="bf-desc-box">{gameType.desc} &nbsp;— Multiplier: <strong>{gameType.win}x</strong></div>
 
-        {id !== 'jodi' && id !== 'jodi_bulk' && id !== 'jodi_digit' && id !== 'red_jodi' && id !== 'family_pana' && id !== 'family_jodi' && id !== 'crossing_jodi' && <SessionToggle />}
-
-        {id === 'single_digit'      && <><div className="bf-fg"><label className="bf-label">Pick a Digit (0–9)</label><NumGrid selected={num} onSelect={v => { setNum(v); setActiveN(Number(v)); }} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
-        {id === 'single_digit_bulk' && <><div className="bf-fg"><label className="bf-label">Pick Digits</label><NumGrid selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips} label="Bid Amount (Min ₹10)"/><AddBtn label="+ Add Digit"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
+        {!isDisawarType && id !== 'jodi' && id !== 'jodi_bulk' && id !== 'jodi_digit' && id !== 'red_jodi' && id !== 'family_pana' && id !== 'family_jodi' && id !== 'crossing_jodi' && id !== 'single_digit_close' && <SessionToggle />}
+{(id === 'single_digit' || id === 'single_digit_close') && <><div className="bf-fg"><label className="bf-label">Pick a Digit (0–9)</label><NumGrid selected={num} onSelect={v => { setNum(v); setActiveN(Number(v)); }} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}        {id === 'single_digit_bulk' && <><div className="bf-fg"><label className="bf-label">Pick Digits</label><NumGrid selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips} label="Bid Amount (Min ₹10)"/><AddBtn label="+ Add Digit"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
         {id === 'jodi_digit'        && <><div className="bf-fg"><label className="bf-label">Pick Jodi (00–99)</label><JodiGrid selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
         {id === 'jodi_bulk'         && <><div className="bf-fg"><label className="bf-label">Pick Jodi</label><JodiGrid selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><AddBtn label="+ Add Jodi"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
         {id === 'single_pana'       && <><div className="bf-fg"><label className="bf-label">Pick Single Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
@@ -746,7 +745,60 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         {id === 'digit_jodi' && <><div className="bf-fg"><label className="bf-label">Open or Close?</label><div className="bf-session-row" style={{marginBottom:10}}>{['open','close'].map(s => (<div key={s} className={`bf-session-btn${openClose === s ? ' active' : ''}`} style={{flex:1,textAlign:'center',padding:'10px 0',fontSize:13}} onClick={() => setOpenClose(s)}>{s.toUpperCase()}</div>))}</div></div><div className="bf-fg"><label className="bf-label">Pick a Digit</label><NumGrid selected={activeN !== null ? String(activeN) : ''} onSelect={v => setActiveN(Number(v))} /></div>{activeN !== null && <div className="bf-desc-box">Will add <strong>{digitJodis.length} jodis</strong>: {digitJodis.join(', ')}</div>}<AmtInput amt={amt} setAmt={setAmt} chips={chips} label="Amount per jodi"/><AddBtn label="+ Add Digit Jodis"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
 
         {/* SP/DP COMMON */}
-        {(id === 'sp_common' || id === 'dp_common') && <><div className="bf-fg"><label className="bf-label">🔢 Digit Select Karo (0–9)</label><NumGrid selected={spDpDigit !== null ? String(spDpDigit) : ''} onSelect={v => { setSpDpDigit(Number(v)); setNum(''); }} /></div>{spDpDigit !== null && (<div className="bf-fg"><label className="bf-label">Pick {id === 'sp_common' ? 'Single' : 'Double'} Pana — Digit {spDpDigit} ({id === 'sp_common' ? SP_PANAS_FINAL[spDpDigit]?.length : DP_PANAS[spDpDigit]?.length} panas)</label><PanaGrid panas={id === 'sp_common' ? (SP_PANAS_FINAL[spDpDigit] || []) : (DP_PANAS[spDpDigit] || [])} selected={num} onSelect={setNum} /></div>)}{spDpDigit === null && (<div className="bf-desc-box" style={{ background: 'rgba(255,165,0,0.1)', color: '#FFA500', border: '1px solid rgba(255,165,0,0.3)' }}>⬆️ Pehle digit select karo</div>)}<AmtInput amt={amt} setAmt={setAmt} chips={chips}/><AddBtn/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
+        {(id === 'sp_common' || id === 'dp_common') && <>
+          <div className="bf-fg">
+            <label className="bf-label">🔢 Digit Select Karo (0–9)</label>
+            <NumGrid selected={spDpDigit !== null ? String(spDpDigit) : ''} onSelect={v => { setSpDpDigit(Number(v)); setNum2('ALL'); }} />
+          </div>
+          {spDpDigit === null && (<div className="bf-desc-box" style={{ background:'rgba(255,165,0,0.1)', color:'#FFA500', border:'1px solid rgba(255,165,0,0.3)' }}>⬆️ Pehle digit select karo</div>)}
+          {spDpDigit !== null && (() => {
+            const allPanas = id === 'sp_common' ? (SP_PANAS_FINAL[spDpDigit] || []) : (DP_PANAS[spDpDigit] || []);
+            const selectedCommon = (num2 === 'ALL' || num2 === '') ? [...allPanas] : num2.split(',').filter(Boolean);
+            const setSelectedCommon = (arr) => setNum2(arr.length === allPanas.length ? 'ALL' : arr.join(','));
+            const toggleCommonPana = (p) => {
+              if (selectedCommon.includes(p)) setSelectedCommon(selectedCommon.filter(x => x !== p));
+              else setSelectedCommon([...selectedCommon, p]);
+            };
+            const toggleAllCommon = () => {
+              if (selectedCommon.length === allPanas.length) setSelectedCommon([]);
+              else setSelectedCommon([...allPanas]);
+            };
+            return <>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, gap:8 }}>
+                <div className="bf-desc-box" style={{ background:'rgba(0,255,213,0.08)', color:'#00ffd5', border:'1px solid rgba(0,255,213,0.4)', margin:0, flex:1 }}>
+                  🎯 Digit <strong>{spDpDigit}</strong> — <strong>{selectedCommon.length}/{allPanas.length}</strong> Panas selected
+                </div>
+                <div onClick={toggleAllCommon} style={{ padding:'8px 12px', background: selectedCommon.length === allPanas.length ? '#e53935' : '#00ffd5', color:'#000', borderRadius:8, fontWeight:700, fontSize:12, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
+                  {selectedCommon.length === allPanas.length ? '✕ Clear' : '✓ All'}
+                </div>
+              </div>
+              <div className="bf-fg">
+                <label className="bf-label">📋 Click karke select/deselect karo</label>
+                <div className="bf-pana-grid">
+                  {allPanas.map(p => (
+                    <div key={p} className={`bf-pchip${selectedCommon.includes(p) ? ' active' : ''}`} onClick={() => toggleCommonPana(p)}>{p}</div>
+                  ))}
+                </div>
+              </div>
+              {selectedCommon.length === 0 && (<div className="bf-desc-box" style={{ background:'rgba(255,165,0,0.1)', color:'#FFA500', border:'1px solid rgba(255,165,0,0.3)' }}>⚠️ Kam se kam <strong>1 pana</strong> select karo</div>)}
+              {selectedCommon.length > 0 && <AmtInput amt={amt} setAmt={setAmt} chips={chips} label="💰 Amount per Pana (Min ₹10)" />}
+              {selectedCommon.length > 0 && Number(amt) >= 10 && (
+                <div className="bf-infobox">📊 <strong>{selectedCommon.length} panas</strong> × ₹<strong>{amt}</strong> = Total: <strong>₹{(selectedCommon.length * Number(amt)).toLocaleString()}</strong></div>
+              )}
+              {selectedCommon.length > 0 && (
+                <button onClick={() => {
+                  if (!amt || Number(amt) < 10) return;
+                  setBets(b => [...b, ...selectedCommon.map(p => ({ num: p, amt: Number(amt) }))]);
+                  setSpDpDigit(null); setNum2('ALL'); setAmt('');
+                }} className="bf-add-btn" style={{ opacity: (!amt || Number(amt) < 10) ? 0.5 : 1 }}>
+                  + Add to List {(!amt || Number(amt) < 10) ? '' : ''}
+                </button>
+              )}
+            </>;
+          })()}
+          <BulkTable/>
+          {bets.length > 0 && <PlaceAllBtn/>}
+        </>}
 
         {/* CYCLE PANNA */}
         {id === 'cycle_panna' && <>
