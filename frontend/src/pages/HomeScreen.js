@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DepositModal } from './OtherPages';
-
 
 export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, apiCall, onViewChart, openDisawar, onDisawarOpened }) {
   const [games, setGames] = useState([]);
@@ -8,17 +7,57 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
   const [currentSlide, setCurrentSlide] = useState(0);
   const [disawarGames, setDisawarGames] = useState([]);
   const [showDisawar, setShowDisawar] = useState(false);
-const [selectedDisawarGame, setSelectedDisawarGame] = useState(null);
+  const [selectedDisawarGame, setSelectedDisawarGame] = useState(null);
   const [showDeposit, setShowDeposit] = useState(false);
   const [tooltipInfo, setTooltipInfo] = useState(null);
+  
+  // ✅ SLIDER STATE (0: Main Bazar, 1: Starline, 2: Disawar)
+  const [activeView, setActiveView] = useState(0);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
-  const [settings, setSettings] = useState({
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = 0;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && activeView < 2) {
+      if (activeView === 0) {
+        navigate && navigate('starline');
+        setActiveView(1);
+      } else if (activeView === 1) {
+        setShowDisawar(true);
+        setActiveView(2);
+      }
+    } else if (isRightSwipe && activeView > 0) {
+      if (activeView === 2) {
+        setShowDisawar(false);
+        setActiveView(1);
+      } else if (activeView === 1) {
+        setActiveView(0);
+      }
+    }
+    touchStartX.current = 0;
+    touchEndX.current = 0;
+  };
+
+  const settings = useState({
     site_name: 'MATKA KING',
     whatsapp: '9999999999',
     telegram: 'matkaking_support',
     phone: '9999999999',
     ticker_text: '',
-  });
+  })[0];
 
 const DISAWAR_GAME_TYPES = [
   { id: 'single_digit',       label: 'Left Digit',  icon: '🎯', desc: 'Open result digit', win: 9,  numType: 'ank'      },
@@ -42,6 +81,7 @@ const DISAWAR_GAME_TYPES = [
   useEffect(() => {
     if (openDisawar) {
       setShowDisawar(true);
+      setActiveView(2);
       setSelectedDisawarGame(null);
       if (onDisawarOpened) onDisawarOpened();
     }
@@ -115,7 +155,6 @@ const DISAWAR_GAME_TYPES = [
     fetchGames();
   }, []);
 
-  // ✅ 30 Second Delay Logic
   const isTimePassed = (timeStr, delaySeconds = 30) => {
     if (!timeStr) return false;
     try {
@@ -129,12 +168,10 @@ const DISAWAR_GAME_TYPES = [
     } catch { return false; }
   };
 
-  // ✅ Result Format with 30 Sec Delay
   const formatResult = (g) => {
     let openRes = g.open_result;
     let closeRes = g.close_result;
 
-    // 1 AM ke baad results hide karo (reset time)
     const nowH = new Date().getHours();
     if (nowH >= 1 && nowH < 6) {
       return '***-**-***';
@@ -164,25 +201,21 @@ const DISAWAR_GAME_TYPES = [
     return `${open}-${jodi}-${close}`;
   };
    
-// ── DISAWAR RESULT — sirf jodi (2 digit) dikhao ──────────────────
   const formatDisawarResult = (g) => {
     const nowH = new Date().getHours();
     if (nowH >= 1 && nowH < 6) return '**';
 
-    // ✅ Pehle jodi_result check karo (scraper yahi save karta hai)
     const jodiRes = g.jodi_result;
     if (jodiRes && String(jodiRes).trim() !== '') {
       const j = String(jodiRes).replace(/[^0-9]/g, '');
       if (/^\d{2}$/.test(j)) return j;
     }
 
-    // ✅ Fallback: close_result se nikalo
     const closeRes = g.close_result;
     if (!closeRes || !isTimePassed(g.close_time, 30)) return '**';
     const cleaned = String(closeRes).replace(/[^0-9]/g, '');
     if (/^\d{2}$/.test(cleaned)) return cleaned;
 
-    // ✅ Fallback: open + close digit se jodi banao
     const openRes = g.open_result;
     if (openRes && closeRes) {
       const od = String(openRes).split('').reduce((s, c) => s + parseInt(c), 0) % 10;
@@ -193,7 +226,6 @@ const DISAWAR_GAME_TYPES = [
     return '**';
   };
 
-// ── DISAWAR STATUS — sirf close time dekho ───────────────────────
   const getDisawarStatus = (g) => {
     const hasClose = g.close_result && String(g.close_result).trim() !== '';
     if (hasClose) return { text: 'Closed for today', canPlay: false };
@@ -216,52 +248,45 @@ const DISAWAR_GAME_TYPES = [
     return { text: 'Market is open', canPlay: true };
   };
 
-
   const getGameStatus = (g) => {
-  const hasOpen  = g.open_result  && String(g.open_result).trim()  !== '';
-  const hasClose = g.close_result && String(g.close_result).trim() !== '';
+    const hasOpen  = g.open_result  && String(g.open_result).trim()  !== '';
+    const hasClose = g.close_result && String(g.close_result).trim() !== '';
 
-  // Dono results aa gaye = band
-  if (hasOpen && hasClose) {
-    return { text: 'Closed for today', canPlay: false };
-  }
+    if (hasOpen && hasClose) {
+      return { text: 'Closed for today', canPlay: false };
+    }
 
-  // ✅ Time comparison — minutes mein convert karke (midnight crossing handle)
-  const now = new Date();
-  const nowMins = now.getHours() * 60 + now.getMinutes();
+    const now = new Date();
+    const nowMins = now.getHours() * 60 + now.getMinutes();
 
-  const toMins = (timeStr) => {
-    if (!timeStr) return 0;
-    const [h, m] = timeStr.split(':').map(Number);
-    return h * 60 + m;
+    const toMins = (timeStr) => {
+      if (!timeStr) return 0;
+      const [h, m] = timeStr.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    const closeMins = toMins(g.close_time);
+
+    const isLateNightGame = closeMins >= 22 * 60;
+    const isAfterMidnight = nowMins < 2 * 60;
+
+    let isClosed = false;
+    if (isLateNightGame && isAfterMidnight) {
+      isClosed = false;
+    } else {
+      isClosed = nowMins >= closeMins;
+    }
+
+    if (isClosed) {
+      return { text: 'Closed for today', canPlay: false };
+    }
+
+    if (hasOpen) {
+      return { text: 'Running for close', canPlay: true };
+    }
+
+    return { text: 'Market is open', canPlay: true };
   };
-
-  const closeMins = toMins(g.close_time);
-
-  // Reset window: 2:00 AM = 120 mins tak games open rahein
-  // Agar close_time raat ka hai (>= 22:00 = 1320 mins)
-  // aur current time 2 AM se pehle hai (< 120 mins), toh abhi band nahi hui
-  const isLateNightGame = closeMins >= 22 * 60; // 10 PM ke baad close hone wali games
-  const isAfterMidnight = nowMins < 2 * 60;     // 12 AM - 2 AM window
-
-  let isClosed = false;
-  if (isLateNightGame && isAfterMidnight) {
-    // Late night game, abhi 2 AM nahi hua — band nahi karni
-    isClosed = false;
-  } else {
-    isClosed = nowMins >= closeMins;
-  }
-
-  if (isClosed) {
-    return { text: 'Closed for today', canPlay: false };
-  }
-
-  if (hasOpen) {
-    return { text: 'Running for close', canPlay: true };
-  }
-
-  return { text: 'Market is open', canPlay: true };
-};
 
   const formatTime = (timeStr) => {
     if (!timeStr) return '--:--';
@@ -277,12 +302,11 @@ const DISAWAR_GAME_TYPES = [
     ? settings.ticker_text
     : `📞 Contact: ${settings.phone} &nbsp;&nbsp;&nbsp; 💳 Instant Withdrawal | 100% Safe &nbsp;&nbsp;&nbsp; 📞 Contact: ${settings.phone} &nbsp;&nbsp;&nbsp; 💳 Instant Withdrawal | 100% Safe`;
 
-  // ✅ ADMIN IMPERSONATION CHECK
   const isAdminImpersonating = localStorage.getItem('mk_admin_token');
   const backToAdmin = () => {
     localStorage.setItem('mk_token', localStorage.getItem('mk_admin_token'));
     localStorage.removeItem('mk_admin_token');
-    window.location.href = '/?admin=1'; // Wapas admin panel
+    window.location.href = '/?admin=1';
   };
 
   const getGameIcon = (name) => {
@@ -329,7 +353,6 @@ const DISAWAR_GAME_TYPES = [
     ));
   };
 
-  // ── DISAWAR PAGE ──────────────────────────────────────────────
   // ── DISAWAR GAME TYPE SELECTION ───────────────────────────────
 if (selectedDisawarGame) {
   return (
@@ -392,8 +415,12 @@ if (selectedDisawarGame) {
 // ── DISAWAR PAGE ──────────────────────────────────────────
 if (showDisawar) {
     return (
-      <div className="screen" style={{ paddingBottom: 80, backgroundColor: '#021a14', minHeight: '100vh', color: '#fff', fontFamily: "'Poppins', sans-serif" }}>
-        {/* ✅ BACK TO ADMIN BUTTON */}
+      <div className="screen" 
+        onTouchStart={handleTouchStart} 
+        onTouchMove={handleTouchMove} 
+        onTouchEnd={handleTouchEnd}
+        style={{ paddingBottom: 80, backgroundColor: '#021a14', minHeight: '100vh', color: '#fff', fontFamily: "'Poppins', sans-serif" }}
+      >
         {isAdminImpersonating && (
           <button onClick={backToAdmin} style={{ position: 'fixed', top: 10, right: 10, zIndex: 9999, background: '#0d1b5e', color: '#FFD700', padding: '8px 16px', borderRadius: 8, fontWeight: 800, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', cursor: 'pointer' }}>
             ⬅️ Back to Admin
@@ -418,7 +445,7 @@ if (showDisawar) {
         `}</style>
 
         <div style={{ background: 'linear-gradient(135deg, #1a3a6e, #2356b0)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 3px 14px rgba(26,58,110,0.3)', position: 'sticky', top: 0, zIndex: 100 }}>
-          <button onClick={() => setShowDisawar(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <button onClick={() => { setShowDisawar(false); setActiveView(1); }} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6"/>
             </svg>
@@ -444,7 +471,7 @@ if (showDisawar) {
             </div>
           ) : (
             disawarGames.map((g) => {
-const status = getDisawarStatus(g);
+              const status = getDisawarStatus(g);
               return (
                 <div key={g.id} className="game-wrapper">
                   <div className="game-card-content">
@@ -460,35 +487,28 @@ const status = getDisawarStatus(g);
                       </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', margin: '8px 0', gap: 8 }}>
-  {/* Yesterday's Jodi */}
-  <div style={{ flex: 1, textAlign: 'center' }}>
-    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>YESTERDAY'S JODI</div>
-    <div style={{ fontSize: 15, fontWeight: 900, color: 'rgba(0,255,213,0.5)', letterSpacing: 2, fontFamily: "'Orbitron', sans-serif" }}>
-      {g.prev_jodi_result || g.yesterday_jodi || '--'}
-    </div>
-  </div>
-
-  {/* Divider */}
-  <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.15)' }} />
-
-  {/* Today's Jodi */}
-  <div style={{ flex: 1, textAlign: 'center' }}>
-    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>TODAY'S JODI</div>
-    <div className="result-number" style={{ fontSize: 15, fontWeight: 900, color: '#00ffd5', letterSpacing: 2, fontFamily: "'Orbitron', sans-serif" }}>
-      {formatDisawarResult(g)}
-    </div>
-  </div>
-</div>
+                      <div style={{ flex: 1, textAlign: 'center' }}>
+                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>YESTERDAY'S JODI</div>
+                        <div style={{ fontSize: 15, fontWeight: 900, color: 'rgba(0,255,213,0.5)', letterSpacing: 2, fontFamily: "'Orbitron', sans-serif" }}>
+                          {g.prev_jodi_result || g.yesterday_jodi || '--'}
+                        </div>
+                      </div>
+                      <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.15)' }} />
+                      <div style={{ flex: 1, textAlign: 'center' }}>
+                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>TODAY'S JODI</div>
+                        <div className="result-number" style={{ fontSize: 15, fontWeight: 900, color: '#00ffd5', letterSpacing: 2, fontFamily: "'Orbitron', sans-serif" }}>
+                          {formatDisawarResult(g)}
+                        </div>
+                      </div>
+                    </div>
                     <div style={{ fontSize: 10, color: status.canPlay ? '#00cc44' : '#ff2244', fontWeight: 800, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, letterSpacing: 2 }}>
                       <span style={{ width: 7, height: 7, background: status.canPlay ? '#00cc44' : '#ff2244', borderRadius: '50%', display: 'inline-block', boxShadow: status.canPlay ? '0 0 6px #00cc44' : '0 0 6px #ff2244' }}></span>
                       {status.text.toUpperCase()}
                     </div>
                     <button onClick={() => status.canPlay && setSelectedDisawarGame(g)} disabled={!status.canPlay} className={status.canPlay ? 'play-btn-active' : 'play-btn-disabled'}>
-  {status.canPlay && <span className="rotate-icon" style={{ fontSize: 12 }}>◀</span>}
-  {status.canPlay ? 'PLAY NOW' : 'MARKET CLOSED'}
-</button>
-
-                     {/* 📊 CHART BUTTON - NEW */}
+                      {status.canPlay && <span className="rotate-icon" style={{ fontSize: 12 }}>◀</span>}
+                      {status.canPlay ? 'PLAY NOW' : 'MARKET CLOSED'}
+                    </button>
                     <button 
                       onClick={() => onViewChart(g)}
                       style={{ width: '100%', padding: '8px', border: '1.5px solid rgba(0,255,213,0.4)', borderRadius: '10px', background: 'rgba(0,255,213,0.08)', color: '#00ffd5', fontWeight: 800, fontSize: 12, cursor: 'pointer', marginTop: 8, letterSpacing: 1, textTransform: 'uppercase' }}
@@ -507,15 +527,19 @@ const status = getDisawarStatus(g);
 
   // ── MAIN HOME ─────────────────────────────────────────────────
   return (
-    <div className="screen" style={{ 
-      paddingBottom: 80, 
-      backgroundColor: '#021a14', 
-      minHeight: '100vh', 
-      color: '#fff', 
-      fontFamily: "'Poppins', sans-serif" 
-    }}>
+    <div className="screen" 
+      onTouchStart={handleTouchStart} 
+      onTouchMove={handleTouchMove} 
+      onTouchEnd={handleTouchEnd}
+      style={{ 
+        paddingBottom: 80, 
+        backgroundColor: '#021a14', 
+        minHeight: '100vh', 
+        color: '#fff', 
+        fontFamily: "'Poppins', sans-serif" 
+      }}
+    >
       
-      {/* ✅ BACK TO ADMIN BUTTON */}
       {isAdminImpersonating && (
         <button onClick={backToAdmin} style={{ position: 'fixed', top: 10, right: 10, zIndex: 9999, background: '#0d1b5e', color: '#FFD700', padding: '8px 16px', borderRadius: 8, fontWeight: 800, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', cursor: 'pointer' }}>
           ⬅️ Back to Admin
@@ -523,7 +547,6 @@ const status = getDisawarStatus(g);
       )}
 
       <style>{`
-        /* SLIDER ANIMATION */
         @keyframes scroll {
           0% { transform: translateX(0); }
           100% { transform: translateX(-50%); }
@@ -534,24 +557,12 @@ const status = getDisawarStatus(g);
         }
         .infinite-slider:hover { animation-play-state: paused; }
 
-        /* ACTION BUTTONS */
-        .action-btn {
-          flex: 1; padding: 12px; border: none; border-radius: 20px; 
-          color: #fff; font-weight: 900; font-size: 13px; cursor: pointer; 
-          display: flex; align-items: center; justify-content: center; gap: 6px; 
-          box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: all 0.3s ease;
-          text-transform: uppercase; letter-spacing: 1px;
-        }
-        .action-btn:hover { transform: scale(1.03); }
-
-        /* PLAY NOW SYMBOL ROTATE */
         @keyframes spinIcon {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(-360deg); }
         }
         .rotate-icon { display: inline-block; animation: spinIcon 2s linear infinite; }
 
-        /* 🔥 TOP BUTTONS ELECTRIC WRAPPER 🔥 */
         .top-btn-wrapper {
           flex: 1; position: relative; border-radius: 25px; overflow: hidden;
           padding: 2px; box-shadow: 0 4px 10px rgba(0,255,213,0.25);
@@ -566,8 +577,7 @@ const status = getDisawarStatus(g);
           gap: 6px; letter-spacing: 1px; position: relative; z-index: 2;
         }
 
-        /* GAME CARD WRAPPER */
-                .game-wrapper {
+        .game-wrapper {
           position: relative; border-radius: 10px; margin-bottom: 12px;
           box-shadow: 0 4px 12px rgba(0,255,213,0.15); 
           transition: transform 0.2s ease, box-shadow 0.3s ease;
@@ -575,63 +585,31 @@ const status = getDisawarStatus(g);
         }
         .game-wrapper:hover { 
           transform: translateY(-3px); 
-          /* 🔥 ELECTRIC GLOW 🔥 */
           box-shadow: 
-            0 0 5px rgba(0, 255, 213, 0.8),   /* Sharp inner glow */
-            0 0 15px rgba(0, 255, 213, 0.6),  /* Middle spread */
-            0 0 30px rgba(0, 255, 213, 0.4);  /* Outer wide glow */
+            0 0 5px rgba(0, 255, 213, 0.8),
+            0 0 15px rgba(0, 255, 213, 0.6),
+            0 0 30px rgba(0, 255, 213, 0.4);
         }
         .game-card-content {
           position: relative; background: linear-gradient(145deg, #021a14, #063d35);
           border-radius: 8px; padding: 10px 12px; z-index: 2; height: 100%; display: flex; flex-direction: column; justify-content: center;
         }
 
-        /* 🔥 PLAY BUTTON ACTIVE 🔥 */
         .play-btn-active {
-          width: 100%; 
-          padding: 10px; 
-          border: none; 
-          border-radius: 10px 40px 10px 40px;
-          color: #001a17; 
-          font-weight: 900; 
-          font-size: 13px; 
-          cursor: pointer; 
+          width: 100%; padding: 10px; border: none; border-radius: 10px 40px 10px 40px;
+          color: #001a17; font-weight: 900; font-size: 13px; cursor: pointer; 
           display: flex; align-items: center; justify-content: center; gap: 6px;
           background: linear-gradient(90deg, #14f4ce, #e0800b);
-          transition: all 0.3s ease; 
-          letter-spacing: 2px;
-          text-transform: uppercase;
-          box-shadow: none; 
-          position: relative;
-          overflow: hidden; 
+          transition: all 0.3s ease; letter-spacing: 2px;
+          text-transform: uppercase; box-shadow: none; position: relative; overflow: hidden; 
         }
-          
-        .play-btn-active:hover {
-          transform: scale(1.02);
-          box-shadow: none;
-        }
-
-        /* 🔥 LEFT TO RIGHT SHINE ANIMATION 🔥 */
+        .play-btn-active:hover { transform: scale(1.02); box-shadow: none; }
         .play-btn-active::before {
-          content: "";
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(
-            120deg,
-            transparent,
-            rgba(255, 255, 255, 0.7),
-            transparent
-          );
+          content: ""; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+          background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.7), transparent);
           animation: shineMove 2.5s infinite linear;
         }
-
-        @keyframes shineMove {
-          0% { left: -100%; }
-          100% { left: 100%; }
-        }
+        @keyframes shineMove { 0% { left: -100%; } 100% { left: 100%; } }
 
         .play-btn-disabled {
           width: 100%; padding: 10px; background: #69e2a6; 
@@ -641,38 +619,22 @@ const status = getDisawarStatus(g);
           box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); text-transform: uppercase;
         }
 
-        /* Result number glow */
-        @keyframes resultGlow {
-          from { text-shadow: 0 0 5px #00ffd5; }
-          to   { text-shadow: 0 0 20px #00aaff; }
-        }
-        .result-number {
-          animation: resultGlow 1.5s infinite alternate;
-        }
+        @keyframes resultGlow { from { text-shadow: 0 0 5px #00ffd5; } to { text-shadow: 0 0 20px #00aaff; } }
+        .result-number { animation: resultGlow 1.5s infinite alternate; }
 
         .gc-name {
-          font-family: 'Poppins', sans-serif;
-          font-size: 22px;
-          font-weight: 900;
-          letter-spacing: 2px;
-          position: relative;
-          display: inline-block;
-          text-transform: uppercase;
+          font-family: 'Poppins', sans-serif; font-size: 22px; font-weight: 900; letter-spacing: 2px;
+          position: relative; display: inline-block; text-transform: uppercase;
           background: linear-gradient(180deg, #fff2a8, #ffd700, #ff9900);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          text-shadow: 0 2px 0 #cc9900, 0 4px 10px rgba(0,0,0,0.6);
-          margin-top: 2px;
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+          text-shadow: 0 2px 0 #cc9900, 0 4px 10px rgba(0,0,0,0.6); margin-top: 2px;
         }
-        
-        .gc-name span {
-          display: inline-block;
-        }
-        
-        @keyframes wave {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
-        }
+        .gc-name span { display: inline-block; }
+        @keyframes wave { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+        /* Slider Indicators */
+        .slider-dot { width: 10px; height: 10px; borderRadius: 50%; background: rgba(0,255,213,0.3); transition: all 0.3s ease; }
+        .slider-dot.active { background: #00ffd5; width: 24px; borderRadius: 5px; box-shadow: 0 0 8px rgba(0,255,213,0.6); }
       `}</style>
 
       {/* MARQUEE */}
@@ -684,14 +646,26 @@ const status = getDisawarStatus(g);
 
       <div style={{ padding: '12px 12px 0 12px' }}>
         
-        {/* STARLINE & DISAWAR */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-          <div className="top-btn-wrapper">
-            <button className="top-btn-inner" onClick={() => navigate && navigate('starline')}>▶ STARLINE</button>
-          </div>
-          <div className="top-btn-wrapper">
-            <button className="top-btn-inner" onClick={() => setShowDisawar(true)}>▶ DISAWAR</button>
-          </div>
+        {/* ✅ NEW SLIDER TAB BUTTONS (REPLACES ADD/WITHDRAW) */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14, background: 'rgba(0,0,0,0.4)', padding: 4, borderRadius: 14, border: '1px solid rgba(0,255,213,0.2)' }}>
+          <button 
+            onClick={() => setActiveView(0)} 
+            style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 0 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 0 ? '#00ffd5' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 0 ? '0 4px 10px rgba(0,255,213,0.3)' : 'none', textTransform: 'uppercase' }}
+          >
+            🏠 Main Bazar
+          </button>
+          <button 
+            onClick={() => { setActiveView(1); navigate && navigate('starline'); }} 
+            style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 1 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 1 ? '#00ffd5' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 1 ? '0 4px 10px rgba(0,255,213,0.3)' : 'none', textTransform: 'uppercase' }}
+          >
+            ⭐ Starline
+          </button>
+          <button 
+            onClick={() => { setActiveView(2); setShowDisawar(true); }} 
+            style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 2 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 2 ? '#00ffd5' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 2 ? '0 4px 10px rgba(0,255,213,0.3)' : 'none', textTransform: 'uppercase' }}
+          >
+            🎯 Disawar
+          </button>
         </div>
 
         {/* BANNER SLIDER (Premium Blue) */}
@@ -713,24 +687,14 @@ const status = getDisawarStatus(g);
           </div>
         </div>
 
-        {/* ADD / WITHDRAW BUTTONS */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
-          <button onClick={() => setShowDeposit(true)} className="action-btn" style={{ background: 'linear-gradient(to right, #006622, #00cc44)' }}>
-            💰 ADD MONEY
-          </button>
-          <button onClick={onWith} className="action-btn" style={{ background: 'linear-gradient(to right, #660011, #ff2244)' }}>
-            💸 WITHDRAW
-          </button>
+        {/* ✅ SWIPE DIRECTION INDICATOR */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginBottom: 14, opacity: 0.6 }}>
+          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>◀ SWIPE FOR STARLINE</span>
+          <div className="slider-dot active"></div>
+          <div className="slider-dot"></div>
+          <div className="slider-dot"></div>
+          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>SWIPE FOR DISAWAR ▶</span>
         </div>
-
-        {/* DEPOSIT MODAL */}
-        {showDeposit && (
-          <DepositModal
-            apiCall={apiCall}
-            onClose={() => setShowDeposit(false)}
-            onSuccess={() => { setShowDeposit(false); }}
-          />
-        )}
 
         {/* GAMES LIST */}
         {loading ? (
@@ -744,7 +708,6 @@ const status = getDisawarStatus(g);
               <div key={g.id} className="game-wrapper">
                 <div className="game-card-content">
                   
-                  {/* TOP ROW — Time + Info */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ 
                       fontSize: 10, color: '#00ffd5', fontWeight: 800,
@@ -781,7 +744,6 @@ const status = getDisawarStatus(g);
                     </div>
                   </div>
                   
-                  {/* 🔥 GAME NAME WITH WAVE ANIMATION 🔥 */}
                   <div style={{ textAlign: 'center' }}>
                     <div className="gc-name">
                       <span style={{ animation: 'none', background: 'none', WebkitTextFillColor: 'initial', textShadow: 'none' }}>
@@ -791,7 +753,6 @@ const status = getDisawarStatus(g);
                     </div>
                   </div>
 
-                  {/* RESULT */}
                   <div className="result-number" style={{ 
                     textAlign: 'center', fontSize: 24, fontWeight: 900, color: '#00ffd5', 
                     margin: '4px 0 8px 0', letterSpacing: '3px',
@@ -800,7 +761,6 @@ const status = getDisawarStatus(g);
                     {formatResult(g)}
                   </div>
 
-                  {/* STATUS DOT */}
                   <div style={{ 
                     fontSize: 10,
                     color: status.canPlay ? '#00cc44' : '#ff2244', 
@@ -817,16 +777,14 @@ const status = getDisawarStatus(g);
                     {status.text.toUpperCase()}
                   </div>
 
-                  {/* PLAY BUTTON */}
-                 <button 
-    onClick={() => status.canPlay && onPlay(g)} 
-    disabled={!status.canPlay} 
-    className={status.canPlay ? 'play-btn-active' : 'play-btn-disabled'}
-  >
+                  <button 
+                    onClick={() => status.canPlay && onPlay(g)} 
+                    disabled={!status.canPlay} 
+                    className={status.canPlay ? 'play-btn-active' : 'play-btn-disabled'}
+                  >
                     {status.canPlay && <span className="rotate-icon" style={{ fontSize: 12 }}>◀</span>}
                     {status.canPlay ? 'PLAY NOW' : 'MARKET CLOSED'}
                   </button>
-                     {/* 📊 CHART BUTTON - NEW */}
                   <button 
                     onClick={() => onViewChart(g)}
                     style={{ width: '100%', padding: '8px', border: '1.5px solid rgba(0,255,213,0.4)', borderRadius: '10px', background: 'rgba(0,255,213,0.08)', color: '#00ffd5', fontWeight: 800, fontSize: 12, cursor: 'pointer', marginTop: 8, letterSpacing: 1, textTransform: 'uppercase' }}
