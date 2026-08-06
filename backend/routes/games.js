@@ -18,6 +18,7 @@ function getMatkaDate() {
 // All game types with payout multipliers
 const GAME_TYPES = {
   'single_digit':      { name: 'Single Digit',       payout: 9.5,   min_digits: 1, max_digits: 1 },
+'single_digit_close':{ name: 'Single Digit Close', payout: 9.5,   min_digits: 1, max_digits: 1 },
   'jodi':              { name: 'Jodi',               payout: 95,    min_digits: 2, max_digits: 2 },
   'single_pana':       { name: 'Single Pana',        payout: 150,   min_digits: 3, max_digits: 3 },
   'double_pana':       { name: 'Double Pana',        payout: 300,   min_digits: 3, max_digits: 3 },
@@ -151,14 +152,14 @@ router.post('/bid', authMiddleware, [
     const now = new Date();
     const currentTime = now.toTimeString().split(' ')[0];
 
-    if (session === 'open' && currentTime >= game.open_time && game.game_category !== 'disawar') {
+  if (session === 'open' && currentTime >= game.open_time && game.game_category !== 'disawar') {
   await conn.rollback();
   return res.status(400).json({ success: false, message: 'Open Betting Time is Over!' });
 }
-    if (session === 'close' && currentTime >= game.close_time) {
-      await conn.rollback();
-      return res.status(400).json({ success: false, message: 'Close Betting Time is Over!' });
-    }
+if (session === 'close' && currentTime >= game.close_time && game.game_category !== 'disawar') {
+  await conn.rollback();
+  return res.status(400).json({ success: false, message: 'Close Betting Time is Over!' });
+}
 
     const matkaDate = getMatkaDate();
     const isTodayResult = game.result_date === matkaDate;
@@ -332,11 +333,10 @@ router.post('/bid/bulk', authMiddleware, async (req, res) => {
   await conn.rollback();
   return res.status(400).json({ success: false, message: 'Open Betting Time is Over!' });
 }
-    if (session === 'close' && currentTime >= game.close_time) {
-      await conn.rollback();
-      return res.status(400).json({ success: false, message: 'Close Betting Time is Over!' });
-    }
-
+    if (session === 'close' && currentTime >= game.close_time && game.game_category !== 'disawar') {
+  await conn.rollback();
+  return res.status(400).json({ success: false, message: 'Close Betting Time is Over!' });
+}
     const isTodayResult = game.result_date === matkaDate;
     const openDeclared  = isTodayResult && !!game.open_result && currentTime >= game.open_time;
     const closeDeclared = isTodayResult && !!game.close_result && currentTime >= game.close_time;
