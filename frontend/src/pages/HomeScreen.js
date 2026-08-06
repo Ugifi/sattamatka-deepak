@@ -8,7 +8,6 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
   const [currentSlide, setCurrentSlide] = useState(0);
   const [disawarGames, setDisawarGames] = useState([]);
   const [showDisawar, setShowDisawar] = useState(false);
-const [activeSection, setActiveSection] = useState(1); // 0=disawar, 1=home, 2=starline
 const [selectedDisawarGame, setSelectedDisawarGame] = useState(null);
   const [showDeposit, setShowDeposit] = useState(false);
   const [tooltipInfo, setTooltipInfo] = useState(null);
@@ -93,10 +92,11 @@ const DISAWAR_GAME_TYPES = [
           g.category?.toLowerCase() === 'disawar' ||
           g.game_category?.toLowerCase() === 'disawar'
         );
-       const main = allGames.filter(g =>
-  g.game_category?.toLowerCase() !== 'disawar' &&
-  g.category?.toLowerCase() !== 'disawar'
-);
+        const main = allGames.filter(g =>
+          !g.name?.toLowerCase().includes('disawar') &&
+          g.category?.toLowerCase() !== 'disawar' &&
+          g.game_category?.toLowerCase() !== 'disawar'
+        );
 
         setGames(main);
         setDisawarGames(disawar.length > 0 ? disawar : allGames.filter(g => g.name?.toLowerCase().includes('disawar')));
@@ -694,84 +694,34 @@ const status = getDisawarStatus(g);
           </div>
         </div>
 
-       {/* SWIPEABLE BANNER + NAVIGATION */}
-       {(() => {
-          const sections = [
-            { key: 'disawar',  label: 'DISAWAR',    emoji: '🎰', color: '#1a3a6e', sub: 'Daily Matka Games' },
-            { key: 'home',     label: 'MAIN GAMES', emoji: '🏠', color: '#113a39', sub: 'All Markets Live'  },
-            { key: 'starline', label: 'STARLINE',   emoji: '⭐', color: '#2d1a6e', sub: 'Starline Markets'  },
-          ];
-          const swipeStartX = React.useRef(null);
-          const handleSwipe = (endX) => {
-            const diff = swipeStartX.current - endX;
-            if (Math.abs(diff) > 50) {
-              if (diff > 0 && activeSection < 2) setActiveSection(activeSection + 1);
-              else if (diff < 0 && activeSection > 0) setActiveSection(activeSection - 1);
-            }
-          };
-          return (
-            <div style={{ marginBottom: 14 }}>
-              <div
-                style={{ borderRadius: 14, height: 115, position: 'relative', overflow: 'hidden', boxShadow: '0 6px 22px rgba(0,0,0,0.3)', touchAction: 'pan-y' }}
-                onTouchStart={e => { swipeStartX.current = e.touches[0].clientX; }}
-                onTouchEnd={e => handleSwipe(e.changedTouches[0].clientX)}
-                onMouseDown={e => { swipeStartX.current = e.clientX; }}
-                onMouseUp={e => handleSwipe(e.clientX)}
-              >
-                {sections.map((s, i) => (
-                  <div key={s.key} style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${s.color}, ${s.color}cc)`, display: 'flex', alignItems: 'center', padding: '0 22px', opacity: activeSection === i ? 1 : 0, transition: 'opacity 0.4s ease', pointerEvents: activeSection === i ? 'auto' : 'none' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontWeight: 700, letterSpacing: 2, marginBottom: 5 }}>SWIPE TO EXPLORE</div>
-                      <div style={{ fontSize: 26, fontWeight: 900, color: '#fff', letterSpacing: 2, marginBottom: 4 }}>{s.label}</div>
-                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>{s.sub}</div>
-                    </div>
-                    <div style={{ fontSize: 52 }}>{s.emoji}</div>
-                    <div style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 18, color: 'rgba(255,255,255,0.3)' }}>‹</div>
-                    <div style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 18, color: 'rgba(255,255,255,0.3)' }}>›</div>
-                  </div>
-                ))}
+        {/* BANNER SLIDER (Premium Blue) */}
+        <div style={{ overflow: 'hidden', marginBottom: 14, borderRadius: 14, height: 115, position: 'relative', boxShadow: '0 6px 22px rgba(26,58,110,0.30)' }}>
+          {banners.map((b, i) => (
+            <div key={i} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', padding: '0 22px', background: b.bg, opacity: currentSlide === i ? 1 : 0, transition: 'opacity 0.5s ease', pointerEvents: currentSlide === i ? 'auto' : 'none' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 700, letterSpacing: 2, marginBottom: 5 }}>{b.eyebrow}</div>
+                <div style={{ fontSize: 21, fontWeight: 900, color: '#fff', fontFamily: "'Baloo 2', cursive", lineHeight: 1.15, marginBottom: 4 }}>{b.text}</div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>{b.sub}</div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 8 }}>
-                {sections.map((s, i) => (
-                  <div key={s.key} onClick={() => setActiveSection(i)} style={{ width: activeSection === i ? 20 : 8, height: 8, borderRadius: 4, background: activeSection === i ? '#00ffd5' : 'rgba(255,255,255,0.25)', transition: 'all 0.3s', cursor: 'pointer' }} />
-                ))}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 4 }}>
-                {sections.map((s, i) => (
-                  <div key={s.key} style={{ fontSize: 9, color: activeSection === i ? '#00ffd5' : 'rgba(255,255,255,0.25)', fontWeight: 700, letterSpacing: 1, cursor: 'pointer' }} onClick={() => setActiveSection(i)}>{s.label}</div>
-                ))}
-              </div>
+              <div style={{ fontSize: 44, filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.25))' }}>{b.emoji}</div>
             </div>
-          );
-        })()}
+          ))}
+          <div style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5 }}>
+            {banners.map((_, i) => (
+              <div key={i} onClick={() => setCurrentSlide(i)} style={{ width: 7, height: 7, borderRadius: 4, background: currentSlide === i ? '#fff' : 'rgba(255,255,255,0.35)', transition: 'all 0.3s', cursor: 'pointer' }} />
+            ))}
+          </div>
+        </div>
 
-              {/* Dots */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 8 }}>
-                {sections.map((s, i) => (
-                  <div key={s.key} onClick={() => {
-                    setActiveSection(i);
-                    if (sections[i].action) sections[i].action();
-                  }} style={{
-                    width: activeSection === i ? 20 : 8,
-                    height: 8, borderRadius: 4,
-                    background: activeSection === i ? '#00ffd5' : 'rgba(255,255,255,0.25)',
-                    transition: 'all 0.3s', cursor: 'pointer'
-                  }} />
-                ))}
-              </div>
-
-              {/* Labels */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 4 }}>
-                {sections.map((s, i) => (
-                  <div key={s.key} style={{ fontSize: 9, color: activeSection === i ? '#00ffd5' : 'rgba(255,255,255,0.25)', fontWeight: 700, letterSpacing: 1, cursor: 'pointer' }}
-                    onClick={() => { setActiveSection(i); if (sections[i].action) sections[i].action(); }}>
-                    {s.label}
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
+        {/* ADD / WITHDRAW BUTTONS */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
+          <button onClick={() => setShowDeposit(true)} className="action-btn" style={{ background: 'linear-gradient(to right, #006622, #00cc44)' }}>
+            💰 ADD MONEY
+          </button>
+          <button onClick={onWith} className="action-btn" style={{ background: 'linear-gradient(to right, #660011, #ff2244)' }}>
+            💸 WITHDRAW
+          </button>
+        </div>
 
         {/* DEPOSIT MODAL */}
         {showDeposit && (
@@ -782,116 +732,13 @@ const status = getDisawarStatus(g);
           />
         )}
 
-        {/* GAMES LIST — section ke hisaab se */}
+        {/* GAMES LIST */}
         {loading ? (
           <div style={{ textAlign: 'center', color: '#00ffd5', padding: 40, fontWeight: 700 }}>⏳ Loading Games...</div>
-        ) : activeSection === 0 ? (
-          // DISAWAR GAMES
-          disawarGames.length === 0 ? (
-            <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', padding: 40 }}>Koi Disawar game nahi hai.</div>
-          ) : disawarGames.map(g => {
-            const status = getDisawarStatus(g);
-            return (
-              <div key={g.id} className="game-wrapper">
-                <div className="game-card-content">
-                  <div style={{ display: 'flex', justifyContent: 'center' }}>
-                    <div style={{ fontSize: 11, color: '#00ffd5', fontWeight: 800, background: 'rgba(0,255,213,0.1)', padding: '3px 12px', borderRadius: 4, border: '1px solid rgba(0,255,213,0.3)' }}>🕐 Close: {formatTime(g.close_time)}</div>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div className="gc-name"><span style={{ animation: 'none', background: 'none', WebkitTextFillColor: 'initial', textShadow: 'none' }}>{getGameIcon(g.name)}&nbsp;</span>{renderWaveText(g.name)}</div>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', margin: '8px 0', gap: 8 }}>
-                    <div style={{ flex: 1, textAlign: 'center' }}>
-                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>YESTERDAY'S JODI</div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: 'rgba(0,255,213,0.5)', letterSpacing: 2, fontFamily: "'Orbitron', sans-serif" }}>{g.prev_jodi_result || '--'}</div>
-                    </div>
-                    <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.15)' }} />
-                    <div style={{ flex: 1, textAlign: 'center' }}>
-                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>TODAY'S JODI</div>
-                      <div className="result-number" style={{ fontSize: 15, fontWeight: 900, color: '#00ffd5', letterSpacing: 2, fontFamily: "'Orbitron', sans-serif" }}>{formatDisawarResult(g)}</div>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 10, color: status.canPlay ? '#00cc44' : '#ff2244', fontWeight: 800, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, letterSpacing: 2 }}>
-                    <span style={{ width: 7, height: 7, background: status.canPlay ? '#00cc44' : '#ff2244', borderRadius: '50%', display: 'inline-block' }}></span>
-                    {status.text.toUpperCase()}
-                  </div>
-                  <button onClick={() => status.canPlay && setSelectedDisawarGame(g)} disabled={!status.canPlay} className={status.canPlay ? 'play-btn-active' : 'play-btn-disabled'}>
-                    {status.canPlay && <span className="rotate-icon" style={{ fontSize: 12 }}>◀</span>}
-                    {status.canPlay ? 'PLAY NOW' : 'MARKET CLOSED'}
-                  </button>
-                  <button onClick={() => onViewChart(g)} style={{ width: '100%', padding: '8px', border: '1.5px solid rgba(0,255,213,0.4)', borderRadius: '10px', background: 'rgba(0,255,213,0.08)', color: '#00ffd5', fontWeight: 800, fontSize: 12, cursor: 'pointer', marginTop: 8, letterSpacing: 1, textTransform: 'uppercase' }}>📊 VIEW CHART</button>
-                </div>
-              </div>
-            );
-          })
-        ) : activeSection === 2 ? (
-          // STARLINE GAMES — sirf category filter
-          games.filter(g => g.game_category === 'starline').length === 0 ? (
-            <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', padding: 40 }}>Koi Starline game nahi hai.</div>
-          ) : games.filter(g => g.game_category === 'starline').map(g => {
-            const status = getGameStatus(g);
-            return (
-              <div key={g.id} className="game-wrapper">
-                <div className="game-card-content">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ fontSize: 10, color: '#00ffd5', fontWeight: 800, background: 'rgba(0,255,213,0.1)', padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(0,255,213,0.3)' }}>Open: {g.open_time}</div>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div className="gc-name"><span style={{ animation: 'none', background: 'none', WebkitTextFillColor: 'initial', textShadow: 'none' }}>{getGameIcon(g.name)}&nbsp;</span>{renderWaveText(g.name)}</div>
-                  </div>
-                  <div className="result-number" style={{ textAlign: 'center', fontSize: 24, fontWeight: 900, color: '#00ffd5', margin: '4px 0 8px 0', letterSpacing: '3px', fontFamily: "'Orbitron', sans-serif" }}>{formatResult(g)}</div>
-                  <div style={{ fontSize: 10, color: status.canPlay ? '#00cc44' : '#ff2244', fontWeight: 800, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, letterSpacing: 2 }}>
-                    <span style={{ width: 7, height: 7, background: status.canPlay ? '#00cc44' : '#ff2244', borderRadius: '50%', display: 'inline-block' }}></span>
-                    {status.text.toUpperCase()}
-                  </div>
-                  <button onClick={() => status.canPlay && onPlay(g)} disabled={!status.canPlay} className={status.canPlay ? 'play-btn-active' : 'play-btn-disabled'}>
-                    {status.canPlay && <span className="rotate-icon" style={{ fontSize: 12 }}>◀</span>}
-                    {status.canPlay ? 'PLAY NOW' : 'MARKET CLOSED'}
-                  </button>
-                  <button onClick={() => onViewChart(g)} style={{ width: '100%', padding: '8px', border: '1.5px solid rgba(0,255,213,0.4)', borderRadius: '10px', background: 'rgba(0,255,213,0.08)', color: '#00ffd5', fontWeight: 800, fontSize: 12, cursor: 'pointer', marginTop: 8, letterSpacing: 1, textTransform: 'uppercase' }}>📊 VIEW CHART</button>
-                </div>
-              </div>
-            );
-          })
+        ) : games.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', padding: 40 }}>Koi game available nahi hai.</div>
         ) : (
-          // MAIN GAMES (home)
-          games.filter(g => g.game_category !== 'starline' && g.game_category !== 'disawar').length === 0 ? (
-            <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', padding: 40 }}>Koi game available nahi hai.</div>
-          ) : games.filter(g => g.game_category !== 'starline' && g.game_category !== 'disawar').map(g => {
-            const status = getGameStatus(g);
-            return (
-              <div key={g.id} className="game-wrapper">
-                <div className="game-card-content">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ fontSize: 10, color: '#00ffd5', fontWeight: 800, background: 'rgba(0,255,213,0.1)', padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(0,255,213,0.3)' }}>Open: {g.open_time}</div>
-                    <div style={{ position: 'relative' }} onMouseEnter={() => setTooltipInfo(g.id)} onMouseLeave={() => setTooltipInfo(null)} onClick={() => setTooltipInfo(tooltipInfo === g.id ? null : g.id)}>
-                      <div style={{ color: '#00ffd5', border: '1.5px solid rgba(0,255,213,0.6)', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, cursor: 'pointer', background: 'rgba(0,255,213,0.1)' }}>i</div>
-                      {tooltipInfo === g.id && (
-                        <div style={{ position: 'absolute', right: 0, top: 22, background: '#021a14', border: '1px solid rgba(0,255,213,0.4)', borderRadius: 6, padding: '6px 10px', color: '#fff', fontSize: 10, fontWeight: 700, zIndex: 50, whiteSpace: 'nowrap', boxShadow: '0 8px 16px rgba(0,0,0,0.8)' }}>
-                          <div style={{ marginBottom: 4 }}>🟢 Open: <span style={{ color: '#00ffd5' }}>{formatTime(g.open_time)}</span></div>
-                          <div>🔴 Close: <span style={{ color: '#00ffd5' }}>{formatTime(g.close_time)}</span></div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div className="gc-name"><span style={{ animation: 'none', background: 'none', WebkitTextFillColor: 'initial', textShadow: 'none' }}>{getGameIcon(g.name)}&nbsp;</span>{renderWaveText(g.name)}</div>
-                  </div>
-                  <div className="result-number" style={{ textAlign: 'center', fontSize: 24, fontWeight: 900, color: '#00ffd5', margin: '4px 0 8px 0', letterSpacing: '3px', fontFamily: "'Orbitron', sans-serif" }}>{formatResult(g)}</div>
-                  <div style={{ fontSize: 10, color: status.canPlay ? '#00cc44' : '#ff2244', fontWeight: 800, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, letterSpacing: 2 }}>
-                    <span style={{ width: 7, height: 7, background: status.canPlay ? '#00cc44' : '#ff2244', borderRadius: '50%', display: 'inline-block' }}></span>
-                    {status.text.toUpperCase()}
-                  </div>
-                  <button onClick={() => status.canPlay && onPlay(g)} disabled={!status.canPlay} className={status.canPlay ? 'play-btn-active' : 'play-btn-disabled'}>
-                    {status.canPlay && <span className="rotate-icon" style={{ fontSize: 12 }}>◀</span>}
-                    {status.canPlay ? 'PLAY NOW' : 'MARKET CLOSED'}
-                  </button>
-                  <button onClick={() => onViewChart(g)} style={{ width: '100%', padding: '8px', border: '1.5px solid rgba(0,255,213,0.4)', borderRadius: '10px', background: 'rgba(0,255,213,0.08)', color: '#00ffd5', fontWeight: 800, fontSize: 12, cursor: 'pointer', marginTop: 8, letterSpacing: 1, textTransform: 'uppercase' }}>📊 VIEW CHART</button>
-                </div>
-              </div>
-            );
-          })
-        )}
+          games.map(g => {
             const status = getGameStatus(g);
             return (
               <div key={g.id} className="game-wrapper">
