@@ -506,6 +506,8 @@ export default function App() {
   const [toast, setToast]                 = useState(null);
   const [selectedGame, setSelectedGame]   = useState(null);
   const [selectedType, setSelectedType]   = useState(null);
+  const [returnToDisawar, setReturnToDisawar] = useState(false);
+  const [showDisawarOnHome, setShowDisawarOnHome] = useState(false);
   const [page, setPage]                   = useState('home');
   const [adminLoggedIn, setAdminLoggedIn] = useState(() => !!localStorage.getItem('mk_token') && localStorage.getItem('mk_admin_logged') === '1');
   const [siteName, setSiteName]           = useState('SATTA KING');
@@ -514,6 +516,11 @@ export default function App() {
 
   const walletRef        = useRef(0);
   const bidSubmittingRef = useRef(false);
+  const prevPageRef      = useRef('home');
+
+  useEffect(() => {
+    return () => { prevPageRef.current = page; };
+  }, [page]);
 
   const showToast = (msg, type = 'ok') => setToast({ msg, type });
 
@@ -591,12 +598,15 @@ export default function App() {
           session:   data.session,
           bids:      data.numbers
         });
-        if (result.success) {
-          showToast(`${result.bids_placed} bids placed! Rs.${result.total_amount} deducted.`);
-          await fetchWallet();
-          const cat = selectedGame?.game_category;
-          const backPage = cat==='starline'?'starline':cat==='jackpot'?'jackpot':cat==='disawar'?'disawar':'home';
-          setPage(backPage); setSelectedGame(null); setSelectedType(null);
+       if (result.success) {
+  showToast(`${result.bids_placed} bids placed! Rs.${result.total_amount} deducted.`);
+  await fetchWallet();
+  const cat = selectedGame?.game_category;
+  const isDisawarHome = returnToDisawar && cat === 'disawar';
+  setReturnToDisawar(false);
+  setShowDisawarOnHome(isDisawarHome);
+  const backPage = cat==='starline'?'starline':cat==='jackpot'?'jackpot': isDisawarHome ? 'home' : cat==='disawar'?'disawar':'home';
+  setPage(backPage); setSelectedGame(null); setSelectedType(null);
         } else {
           showToast(result.message || 'Bulk bid failed!', 'err');
           await fetchWallet();
@@ -619,10 +629,13 @@ export default function App() {
         return;
       }
       await fetchWallet();
-      showToast(`Bid Rs.${amount.toLocaleString()} placed!`);
-      const cat = selectedGame?.game_category;
-      const backPage = cat==='starline'?'starline':cat==='jackpot'?'jackpot':cat==='disawar'?'disawar':'home';
-      setPage(backPage); setSelectedGame(null); setSelectedType(null);
+showToast(`Bid Rs.${amount.toLocaleString()} placed!`);
+const cat = selectedGame?.game_category;
+const isDisawarHome = returnToDisawar && cat === 'disawar';
+setReturnToDisawar(false);
+setShowDisawarOnHome(isDisawarHome);
+const backPage = cat==='starline'?'starline':cat==='jackpot'?'jackpot': isDisawarHome ? 'home' : cat==='disawar'?'disawar':'home';
+setPage(backPage); setSelectedGame(null); setSelectedType(null);
 
     } catch {
       await fetchWallet();
@@ -655,22 +668,40 @@ export default function App() {
   };
 
   const goBack = () => {
-    const cat = selectedGame?.game_category;
-    if (page === 'bet-form') { setPage('game-types'); setSelectedType(null); }
-    else if (page === 'game-types') {
-      if (cat==='starline') { setPage('starline'); setSelectedGame(null); }
-      else if (cat==='jackpot') { setPage('jackpot'); setSelectedGame(null); }
-      else if (cat==='disawar') { setPage('disawar'); setSelectedGame(null); }
-      else { setPage('home'); setSelectedGame(null); setTab('game'); }
-    } 
-    else if (page === 'chart') { // <-- NAYA ADDITION
-      if (cat==='starline') { setPage('starline'); setSelectedGame(null); }
-      else if (cat==='jackpot') { setPage('jackpot'); setSelectedGame(null); }
-      else if (cat==='disawar') { setPage('disawar'); setSelectedGame(null); }
-      else { setPage('home'); setSelectedGame(null); setTab('game'); }
-    } 
-    else { setPage('home'); setTab('game'); }
-  };
+  if (page === 'bet-form') {
+    if (returnToDisawar) {
+      setReturnToDisawar(false);
+      setShowDisawarOnHome(true);
+      setPage('home');
+      setTab('home');
+      setSelectedType(null);
+      setSelectedGame(null);
+    } else {
+      setPage('game-types'); setSelectedType(null);
+    }
+  }
+  else if (page === 'game-types') {
+    const from = prevPageRef.current;
+    if (['home','starline','jackpot','disawar'].includes(from)) {
+      setPage(from);
+    } else {
+      setPage('home'); setTab('game');
+    }
+    setSelectedGame(null);
+  }
+  else if (page === 'chart') {
+    const from = prevPageRef.current;
+    if (['home','starline','jackpot','disawar'].includes(from)) {
+      setPage(from);
+    } else {
+      setPage('home'); setTab('game');
+    }
+    setSelectedGame(null);
+  }
+  else {
+    setPage('home'); setTab('game');
+  }
+};
 
   if (isAdmin) {
     if (!adminLoggedIn) return <AdminLogin onLogin={() => { localStorage.setItem('mk_admin_logged', '1'); setAdminLoggedIn(true); }} />;
@@ -745,9 +776,16 @@ export default function App() {
       </div>
 
       {/* PAGES */}
-      {page === 'home'       && <HomeScreen wallet={wallet} onAdd={() => setModal('add')} onWith={() => setModal('with')} onPlay={g => { 
+  {page === 'home' && <HomeScreen wallet={wallet} onAdd={() => setModal('add')} onWith={() => setModal('with')} openDisawar={showDisawarOnHome} onDisawarOpened={() => setShowDisawarOnHome(false)} onPlay={(g, gt) => { 
     setSelectedGame(g); 
-    setPage('game-types'); 
+    if (gt) {
+      setSelectedType(gt);
+      setReturnToDisawar(true);
+      setPage('bet-form');
+    } else {
+      setReturnToDisawar(false);
+      setPage('game-types');
+    }
     setTab('game');
     window.scrollTo(0, 0);
     document.documentElement.scrollTop = 0;
