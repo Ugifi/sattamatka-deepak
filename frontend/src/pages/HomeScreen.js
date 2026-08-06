@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { DepositModal } from './OtherPages';
 
+function getMatkaDate() {
+  const now = new Date();
+  const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+  if (ist.getUTCHours() < 2) {
+    ist.setUTCDate(ist.getUTCDate() - 1);
+  }
+  return ist.toISOString().split('T')[0];
+}
+
 export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, apiCall, onViewChart, openDisawar, onDisawarOpened }) {
   const [games, setGames] = useState([]);
   const [starlineGames, setStarlineGames] = useState([]);
@@ -32,9 +41,9 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     const isRightSwipe = distance < -50;
 
     if (isLeftSwipe && activeView < 2) {
-      setActiveView(prev => prev + 1); // Slide Right to Left
+      setActiveView(prev => prev + 1);
     } else if (isRightSwipe && activeView > 0) {
-      setActiveView(prev => prev - 1); // Slide Left to Right
+      setActiveView(prev => prev - 1);
     }
     
     touchStartX.current = 0;
@@ -192,17 +201,26 @@ const DISAWAR_GAME_TYPES = [
   };
    
   const formatDisawarResult = (g) => {
-    const nowH = new Date().getHours();
-    if (nowH >= 1 && nowH < 6) return '**';
+    const matkaDate = getMatkaDate();
+
+    // Agar game ka result_date aaj ke matka date se alag hai,
+    // matlab woh result purane din ka hai — today mein ** dikhao
+    if (g.result_date && g.result_date !== matkaDate) {
+      return '**';
+    }
+
+    // Aaj ka result check karo
     const jodiRes = g.jodi_result;
     if (jodiRes && String(jodiRes).trim() !== '') {
       const j = String(jodiRes).replace(/[^0-9]/g, '');
       if (/^\d{2}$/.test(j)) return j;
     }
+
     const closeRes = g.close_result;
     if (!closeRes || !isTimePassed(g.close_time, 30)) return '**';
     const cleaned = String(closeRes).replace(/[^0-9]/g, '');
     if (/^\d{2}$/.test(cleaned)) return cleaned;
+
     const openRes = g.open_result;
     if (openRes && closeRes) {
       const od = String(openRes).split('').reduce((s, c) => s + parseInt(c), 0) % 10;
@@ -210,6 +228,22 @@ const DISAWAR_GAME_TYPES = [
       return `${od}${cd}`;
     }
     return '**';
+  };
+
+  const getDisawarYesterdayJodi = (g) => {
+    const matkaDate = getMatkaDate();
+    // Agar aaj ka result aa gaya (result_date === matkaDate),
+    // toh jodi_result aaj ka hai — yesterday mein prev_jodi_result dikhao
+    if (g.result_date && g.result_date === matkaDate && g.jodi_result) {
+      return g.prev_jodi_result || '--';
+    }
+    // Agar result_date alag hai ya result nahi aaya,
+    // toh jodi_result hi kal ka result hai
+    if (g.result_date && g.result_date !== matkaDate && g.jodi_result) {
+      const j = String(g.jodi_result).replace(/[^0-9]/g, '');
+      if (/^\d{2}$/.test(j)) return j;
+    }
+    return g.prev_jodi_result || '--';
   };
 
   const getDisawarStatus = (g) => {
@@ -408,7 +442,9 @@ const DISAWAR_GAME_TYPES = [
               <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', margin: '8px 0', gap: 8 }}>
                 <div style={{ flex: 1, textAlign: 'center' }}>
                   <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>YESTERDAY'S JODI</div>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: 'rgba(0,255,213,0.5)', letterSpacing: 2, fontFamily: "'Orbitron', sans-serif" }}>{g.prev_jodi_result || g.yesterday_jodi || '--'}</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: 'rgba(0,255,213,0.5)', letterSpacing: 2, fontFamily: "'Orbitron', sans-serif" }}>
+                    {getDisawarYesterdayJodi(g)}
+                  </div>
                 </div>
                 <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.15)' }} />
                 <div style={{ flex: 1, textAlign: 'center' }}>
@@ -488,11 +524,12 @@ const DISAWAR_GAME_TYPES = [
         
         {/* ✅ SLIDER TAB BUTTONS */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 14, background: 'rgba(0,0,0,0.4)', padding: 4, borderRadius: 14, border: '1px solid rgba(0,255,213,0.2)' }}>
-          <button onClick={() => setActiveView(0)} style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 0 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 0 ? '#00ffd5' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 0 ? '0 4px 10px rgba(0,255,213,0.3)' : 'none', textTransform: 'uppercase' }}>
-            🏠 Main Bazar
-          </button>
+         
           <button onClick={() => setActiveView(1)} style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 1 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 1 ? '#00ffd5' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 1 ? '0 4px 10px rgba(0,255,213,0.3)' : 'none', textTransform: 'uppercase' }}>
             ⭐ Starline
+          </button>
+           <button onClick={() => setActiveView(0)} style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 0 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 0 ? '#00ffd5' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 0 ? '0 4px 10px rgba(0,255,213,0.3)' : 'none', textTransform: 'uppercase' }}>
+            🏠 Main Bazar
           </button>
           <button onClick={() => setActiveView(2)} style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 2 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 2 ? '#00ffd5' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 2 ? '0 4px 10px rgba(0,255,213,0.3)' : 'none', textTransform: 'uppercase' }}>
             🎯 Disawar
@@ -516,13 +553,6 @@ const DISAWAR_GAME_TYPES = [
               <div key={i} onClick={() => setCurrentSlide(i)} style={{ width: 7, height: 7, borderRadius: 4, background: currentSlide === i ? '#fff' : 'rgba(255,255,255,0.35)', transition: 'all 0.3s', cursor: 'pointer' }} />
             ))}
           </div>
-        </div>
-
-        {/* ✅ SWIPE DOTS INDICATOR */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-          <div className={`slider-dot ${activeView === 0 ? 'active' : ''}`}></div>
-          <div className={`slider-dot ${activeView === 1 ? 'active' : ''}`}></div>
-          <div className={`slider-dot ${activeView === 2 ? 'active' : ''}`}></div>
         </div>
 
         {/* ✅ CONDITIONAL GAMES RENDERING ON SAME PAGE */}
