@@ -3,15 +3,15 @@ import { DepositModal } from './OtherPages';
 
 export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, apiCall, onViewChart, openDisawar, onDisawarOpened }) {
   const [games, setGames] = useState([]);
+  const [starlineGames, setStarlineGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [disawarGames, setDisawarGames] = useState([]);
-  const [showDisawar, setShowDisawar] = useState(false);
   const [selectedDisawarGame, setSelectedDisawarGame] = useState(null);
   const [showDeposit, setShowDeposit] = useState(false);
   const [tooltipInfo, setTooltipInfo] = useState(null);
   
-  // ✅ SLIDER STATE (0: Main Bazar, 1: Starline, 2: Disawar)
+  // ✅ SLIDER STATE: 0 = Main Bazar, 1 = Starline, 2 = Disawar
   const [activeView, setActiveView] = useState(0);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
@@ -32,32 +32,22 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     const isRightSwipe = distance < -50;
 
     if (isLeftSwipe && activeView < 2) {
-      if (activeView === 0) {
-        navigate && navigate('starline');
-        setActiveView(1);
-      } else if (activeView === 1) {
-        setShowDisawar(true);
-        setActiveView(2);
-      }
+      setActiveView(prev => prev + 1); // Slide Right to Left
     } else if (isRightSwipe && activeView > 0) {
-      if (activeView === 2) {
-        setShowDisawar(false);
-        setActiveView(1);
-      } else if (activeView === 1) {
-        setActiveView(0);
-      }
+      setActiveView(prev => prev - 1); // Slide Left to Right
     }
+    
     touchStartX.current = 0;
     touchEndX.current = 0;
   };
 
-  const settings = useState({
+  const [settings, setSettings] = useState({
     site_name: 'MATKA KING',
     whatsapp: '9999999999',
     telegram: 'matkaking_support',
     phone: '9999999999',
     ticker_text: '',
-  })[0];
+  });
 
 const DISAWAR_GAME_TYPES = [
   { id: 'single_digit',       label: 'Left Digit',  icon: '🎯', desc: 'Open result digit', win: 9,  numType: 'ank'      },
@@ -80,7 +70,6 @@ const DISAWAR_GAME_TYPES = [
 
   useEffect(() => {
     if (openDisawar) {
-      setShowDisawar(true);
       setActiveView(2);
       setSelectedDisawarGame(null);
       if (onDisawarOpened) onDisawarOpened();
@@ -132,18 +121,31 @@ const DISAWAR_GAME_TYPES = [
           g.category?.toLowerCase() === 'disawar' ||
           g.game_category?.toLowerCase() === 'disawar'
         );
+        
+        const starline = allGames.filter(g =>
+          g.name?.toLowerCase().includes('starline') ||
+          g.category?.toLowerCase() === 'starline' ||
+          g.game_category?.toLowerCase() === 'starline'
+        );
+
         const main = allGames.filter(g =>
           !g.name?.toLowerCase().includes('disawar') &&
           g.category?.toLowerCase() !== 'disawar' &&
-          g.game_category?.toLowerCase() !== 'disawar'
+          g.game_category?.toLowerCase() !== 'disawar' &&
+          !g.name?.toLowerCase().includes('starline') &&
+          g.category?.toLowerCase() !== 'starline' &&
+          g.game_category?.toLowerCase() !== 'starline'
         );
 
         setGames(main);
+        setStarlineGames(starline);
         setDisawarGames(disawar.length > 0 ? disawar : allGames.filter(g => g.name?.toLowerCase().includes('disawar')));
       } catch (err) {
         setGames([
-          { id: 1, name: 'STARLINE MORNING', open_time: '09:00:00', close_time: '09:30:00', status: 'open',   result: null },
-          { id: 2, name: 'TIME BAZAR',       open_time: '01:00:00', close_time: '02:00:00', status: 'closed', result: null },
+          { id: 1, name: 'TIME BAZAR', open_time: '01:00:00', close_time: '02:00:00', status: 'closed', result: null },
+        ]);
+        setStarlineGames([
+          { id: 2, name: 'STARLINE MORNING', open_time: '09:00:00', close_time: '09:30:00', status: 'open', result: null },
         ]);
         setDisawarGames([
           { id: 10, name: 'DISAWAR', open_time: '05:00:00', close_time: '04:30:00', status: 'open', result: null },
@@ -162,7 +164,6 @@ const DISAWAR_GAME_TYPES = [
       const [h, m, s] = timeStr.split(':').map(Number);
       const gameDate = new Date();
       gameDate.setHours(h, m, s || 0, 0);
-      
       const diff = (now.getTime() - gameDate.getTime()) / 1000;
       return diff >= delaySeconds;
     } catch { return false; }
@@ -171,22 +172,12 @@ const DISAWAR_GAME_TYPES = [
   const formatResult = (g) => {
     let openRes = g.open_result;
     let closeRes = g.close_result;
-
     const nowH = new Date().getHours();
-    if (nowH >= 1 && nowH < 6) {
-      return '***-**-***';
-    }
-
-    if (openRes && !isTimePassed(g.open_time, 30)) {
-      openRes = null;
-    }
-    if (closeRes && !isTimePassed(g.close_time, 30)) {
-      closeRes = null;
-    }
-
+    if (nowH >= 1 && nowH < 6) return '***-**-***';
+    if (openRes && !isTimePassed(g.open_time, 30)) openRes = null;
+    if (closeRes && !isTimePassed(g.close_time, 30)) closeRes = null;
     const open  = openRes  || '***';
     const close = closeRes || '***';
-
     let jodi = '**';
     if (openRes) {
       const openDigit = String(openRes).split('').reduce((sum, d) => sum + parseInt(d, 10), 0) % 10;
@@ -197,32 +188,27 @@ const DISAWAR_GAME_TYPES = [
         jodi = `${openDigit}*`;
       }
     }
-
     return `${open}-${jodi}-${close}`;
   };
    
   const formatDisawarResult = (g) => {
     const nowH = new Date().getHours();
     if (nowH >= 1 && nowH < 6) return '**';
-
     const jodiRes = g.jodi_result;
     if (jodiRes && String(jodiRes).trim() !== '') {
       const j = String(jodiRes).replace(/[^0-9]/g, '');
       if (/^\d{2}$/.test(j)) return j;
     }
-
     const closeRes = g.close_result;
     if (!closeRes || !isTimePassed(g.close_time, 30)) return '**';
     const cleaned = String(closeRes).replace(/[^0-9]/g, '');
     if (/^\d{2}$/.test(cleaned)) return cleaned;
-
     const openRes = g.open_result;
     if (openRes && closeRes) {
       const od = String(openRes).split('').reduce((s, c) => s + parseInt(c), 0) % 10;
       const cd = String(closeRes).split('').reduce((s, c) => s + parseInt(c), 0) % 10;
       return `${od}${cd}`;
     }
-
     return '**';
   };
 
@@ -239,11 +225,8 @@ const DISAWAR_GAME_TYPES = [
     const closeMins = toMins(g.close_time);
     const isNextDay = closeMins < 6 * 60;
     let isClosed = false;
-    if (isNextDay) {
-      isClosed = nowMins >= closeMins && nowMins < 6 * 60;
-    } else {
-      isClosed = nowMins >= closeMins;
-    }
+    if (isNextDay) isClosed = nowMins >= closeMins && nowMins < 6 * 60;
+    else isClosed = nowMins >= closeMins;
     if (isClosed) return { text: 'Closed for today', canPlay: false };
     return { text: 'Market is open', canPlay: true };
   };
@@ -251,40 +234,22 @@ const DISAWAR_GAME_TYPES = [
   const getGameStatus = (g) => {
     const hasOpen  = g.open_result  && String(g.open_result).trim()  !== '';
     const hasClose = g.close_result && String(g.close_result).trim() !== '';
-
-    if (hasOpen && hasClose) {
-      return { text: 'Closed for today', canPlay: false };
-    }
-
+    if (hasOpen && hasClose) return { text: 'Closed for today', canPlay: false };
     const now = new Date();
     const nowMins = now.getHours() * 60 + now.getMinutes();
-
     const toMins = (timeStr) => {
       if (!timeStr) return 0;
       const [h, m] = timeStr.split(':').map(Number);
       return h * 60 + m;
     };
-
     const closeMins = toMins(g.close_time);
-
     const isLateNightGame = closeMins >= 22 * 60;
     const isAfterMidnight = nowMins < 2 * 60;
-
     let isClosed = false;
-    if (isLateNightGame && isAfterMidnight) {
-      isClosed = false;
-    } else {
-      isClosed = nowMins >= closeMins;
-    }
-
-    if (isClosed) {
-      return { text: 'Closed for today', canPlay: false };
-    }
-
-    if (hasOpen) {
-      return { text: 'Running for close', canPlay: true };
-    }
-
+    if (isLateNightGame && isAfterMidnight) isClosed = false;
+    else isClosed = nowMins >= closeMins;
+    if (isClosed) return { text: 'Closed for today', canPlay: false };
+    if (hasOpen) return { text: 'Running for close', canPlay: true };
     return { text: 'Market is open', canPlay: true };
   };
 
@@ -297,10 +262,6 @@ const DISAWAR_GAME_TYPES = [
       return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
     } catch { return timeStr; }
   };
-
-  const tickerContent = settings.ticker_text
-    ? settings.ticker_text
-    : `📞 Contact: ${settings.phone} &nbsp;&nbsp;&nbsp; 💳 Instant Withdrawal | 100% Safe &nbsp;&nbsp;&nbsp; 📞 Contact: ${settings.phone} &nbsp;&nbsp;&nbsp; 💳 Instant Withdrawal | 100% Safe`;
 
   const isAdminImpersonating = localStorage.getItem('mk_admin_token');
   const backToAdmin = () => {
@@ -329,21 +290,13 @@ const DISAWAR_GAME_TYPES = [
   const renderWaveText = (text) => {
     if (!text) return null;
     let charIndex = 0; 
-    
     return text.split(' ').map((word, wIdx, arr) => (
       <React.Fragment key={wIdx}>
         {word.split('').map((char) => {
           const currentDelay = `${charIndex * 0.1}s`;
           charIndex++;
           return (
-            <span 
-              key={charIndex} 
-              style={{ 
-                display: 'inline-block', 
-                animation: 'wave 1.5s infinite', 
-                animationDelay: currentDelay 
-              }}
-            >
+            <span key={charIndex} style={{ display: 'inline-block', animation: 'wave 1.5s infinite', animationDelay: currentDelay }}>
               {char}
             </span>
           );
@@ -354,176 +307,139 @@ const DISAWAR_GAME_TYPES = [
   };
 
   // ── DISAWAR GAME TYPE SELECTION ───────────────────────────────
-if (selectedDisawarGame) {
-  return (
-    <div className="screen" style={{ paddingBottom: 80, backgroundColor: '#021a14', minHeight: '100vh', color: '#fff', fontFamily: "'Poppins', sans-serif" }}>
-      <style>{`
-        @keyframes sweepRTL { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-        .anim-in { animation: fadeInUp 0.35s ease both; }
-        .dgt-cell { transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; }
-        .dgt-cell:hover { transform: translateY(-3px) scale(1.02); border-color: rgba(0,255,213,0.5) !important; box-shadow: 0 0 20px rgba(0,255,213,0.15) !important; }
-      `}</style>
-
-      <div style={{ background: 'linear-gradient(135deg, #1a3a6e, #2356b0)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 100 }}>
-        <button onClick={() => setSelectedDisawarGame(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <div>
-          <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>{selectedDisawarGame.name}</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>Game Type Select Karo</div>
-        </div>
-      </div>
-
-      <div style={{ textAlign: 'center', padding: '24px 16px 8px' }}>
-        <div style={{ fontFamily: "'Poppins', sans-serif", fontSize: 28, fontWeight: 900, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 3, textShadow: '0 0 20px rgba(255,215,0,0.6)' }}>
-          {selectedDisawarGame.name}
-        </div>
-      </div>
-
-      <div style={{ padding: '8px 14px 4px' }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: '#00ffd5', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, borderLeft: '3px solid #00ffd5', paddingLeft: 10 }}>Digit Games</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-          {DISAWAR_GAME_TYPES.slice(0, 2).map((gt, i) => (
-            <div key={i} className="dgt-cell anim-in" style={{ animationDelay: `${i * 0.05}s`, background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', padding: '28px 12px', borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1px solid rgba(0,255,213,0.15)', boxShadow: '0 4px 15px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }}
-              onClick={() => onPlay(selectedDisawarGame, gt)}>
-              <div style={{ position: 'absolute', inset: 0, padding: 1.5, borderRadius: 14, background: 'linear-gradient(90deg, transparent 30%, rgba(0,255,213,0.6) 50%, transparent 70%)', backgroundSize: '250% 100%', animation: 'sweepRTL 2.8s linear infinite', WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude', pointerEvents: 'none' }} />
-              <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(0,255,213,0.05)', border: '1.5px solid rgba(0,255,213,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, marginBottom: 12 }}>{gt.icon}</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#FFD700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{gt.label}</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>{gt.desc}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ fontSize: 13, fontWeight: 800, color: '#00ffd5', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, borderLeft: '3px solid #00ffd5', paddingLeft: 10 }}>Jodi Games</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {DISAWAR_GAME_TYPES.slice(2, 4).map((gt, i) => (
-            <div key={i} className="dgt-cell anim-in" style={{ animationDelay: `${(i+2) * 0.05}s`, background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', padding: '28px 12px', borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1px solid rgba(0,255,213,0.15)', boxShadow: '0 4px 15px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }}
-              onClick={() => onPlay(selectedDisawarGame, gt)}>
-              <div style={{ position: 'absolute', inset: 0, padding: 1.5, borderRadius: 14, background: 'linear-gradient(90deg, transparent 30%, rgba(0,255,213,0.6) 50%, transparent 70%)', backgroundSize: '250% 100%', animation: 'sweepRTL 2.8s linear infinite', WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude', pointerEvents: 'none' }} />
-              <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(0,255,213,0.05)', border: '1.5px solid rgba(0,255,213,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, marginBottom: 12 }}>{gt.icon}</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#FFD700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{gt.label}</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>{gt.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── DISAWAR PAGE ──────────────────────────────────────────
-if (showDisawar) {
+  if (selectedDisawarGame) {
     return (
-      <div className="screen" 
-        onTouchStart={handleTouchStart} 
-        onTouchMove={handleTouchMove} 
-        onTouchEnd={handleTouchEnd}
-        style={{ paddingBottom: 80, backgroundColor: '#021a14', minHeight: '100vh', color: '#fff', fontFamily: "'Poppins', sans-serif" }}
-      >
-        {isAdminImpersonating && (
-          <button onClick={backToAdmin} style={{ position: 'fixed', top: 10, right: 10, zIndex: 9999, background: '#0d1b5e', color: '#FFD700', padding: '8px 16px', borderRadius: 8, fontWeight: 800, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', cursor: 'pointer' }}>
-            ⬅️ Back to Admin
-          </button>
-        )}
-
+      <div className="screen" style={{ paddingBottom: 80, backgroundColor: '#021a14', minHeight: '100vh', color: '#fff', fontFamily: "'Poppins', sans-serif" }}>
         <style>{`
-          @keyframes wave { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-          @keyframes resultGlow { from { text-shadow: 0 0 5px #00ffd5; } to { text-shadow: 0 0 20px #00aaff; } }
-          .result-number { animation: resultGlow 1.5s infinite alternate; }
-          .gc-name { font-family: 'Poppins', sans-serif; font-size: 22px; font-weight: 900; letter-spacing: 2px; position: relative; display: inline-block; text-transform: uppercase; background: linear-gradient(180deg, #fff2a8, #ffd700, #ff9900); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 2px 0 #cc9900, 0 4px 10px rgba(0,0,0,0.6); margin-top: 2px; }
-          .gc-name span { display: inline-block; }
-          .play-btn-active { width: 100%; padding: 10px; border: none; border-radius: 10px 40px 10px 40px; color: #001a17; font-weight: 900; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; background: linear-gradient(90deg, #14f4ce, #e0800b); transition: all 0.3s ease; letter-spacing: 2px; text-transform: uppercase; box-shadow: none; position: relative; overflow: hidden; }
-          .play-btn-active::before { content: ""; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.7), transparent); animation: shineMove 2.5s infinite linear; }
-          @keyframes shineMove { 0% { left: -100%; } 100% { left: 100%; } }
-          .play-btn-disabled { width: 100%; padding: 10px; background: #69e2a6; border: 1px solid rgba(0,255,213,0.1); border-radius: 10px 40px 10px 40px; color: #3a5a4a; font-weight: 900; font-size: 13px; cursor: not-allowed; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); text-transform: uppercase; }
-          @keyframes spinIcon { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
-          .rotate-icon { display: inline-block; animation: spinIcon 2s linear infinite; }
-          .game-wrapper { position: relative; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,255,213,0.15); transition: transform 0.2s ease; overflow: hidden; padding: 2.5px; }
-          .game-wrapper:hover { transform: translateY(-3px); }
-          .game-card-content { position: relative; background: linear-gradient(145deg, #021a14, #063d35); border-radius: 8px; padding: 10px 12px; z-index: 2; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+          @keyframes sweepRTL { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+          @keyframes fadeInUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+          .anim-in { animation: fadeInUp 0.35s ease both; }
+          .dgt-cell { transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; }
+          .dgt-cell:hover { transform: translateY(-3px) scale(1.02); border-color: rgba(0,255,213,0.5) !important; box-shadow: 0 0 20px rgba(0,255,213,0.15) !important; }
         `}</style>
 
-        <div style={{ background: 'linear-gradient(135deg, #1a3a6e, #2356b0)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 3px 14px rgba(26,58,110,0.3)', position: 'sticky', top: 0, zIndex: 100 }}>
-          <button onClick={() => { setShowDisawar(false); setActiveView(1); }} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
+        <div style={{ background: 'linear-gradient(135deg, #1a3a6e, #2356b0)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 100 }}>
+          <button onClick={() => setSelectedDisawarGame(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>MATKA DISAWAR</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{disawarGames.length} Game{disawarGames.length !== 1 ? 's' : ''} Available</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>{selectedDisawarGame.name}</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>Game Type Select Karo</div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 14px 4px' }}>
-          <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#2a6dd9', animation: 'livePulse 1.4s ease-in-out infinite', flexShrink: 0 }} />
-          <span style={{ fontSize: 14, fontWeight: 900, color: '#1a3a6e', letterSpacing: 1, textTransform: 'uppercase' }}>Disawar Markets</span>
-          <style>{`@keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.3)}}`}</style>
+        <div style={{ textAlign: 'center', padding: '24px 16px 8px' }}>
+          <div style={{ fontFamily: "'Poppins', sans-serif", fontSize: 28, fontWeight: 900, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 3, textShadow: '0 0 20px rgba(255,215,0,0.6)' }}>
+            {selectedDisawarGame.name}
+          </div>
         </div>
 
-        <div style={{ padding: '0 12px' }}>
-          {disawarGames.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 60, color: '#8a9bb5' }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🎯</div>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>Koi Disawar game nahi mila</div>
-              <div style={{ fontSize: 13, marginTop: 6 }}>Admin se games add karwao</div>
-            </div>
-          ) : (
-            disawarGames.map((g) => {
-              const status = getDisawarStatus(g);
-              return (
-                <div key={g.id} className="game-wrapper">
-                  <div className="game-card-content">
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                      <div style={{ fontSize: 11, color: '#00ffd5', fontWeight: 800, background: 'rgba(0,255,213,0.1)', padding: '3px 12px', borderRadius: 4, border: '1px solid rgba(0,255,213,0.3)' }}>
-                        🕐 Close: {formatTime(g.close_time)}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div className="gc-name">
-                        <span style={{ animation: 'none', background: 'none', WebkitTextFillColor: 'initial', textShadow: 'none' }}>{getGameIcon(g.name)}&nbsp;</span>
-                        {renderWaveText(g.name)}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', margin: '8px 0', gap: 8 }}>
-                      <div style={{ flex: 1, textAlign: 'center' }}>
-                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>YESTERDAY'S JODI</div>
-                        <div style={{ fontSize: 15, fontWeight: 900, color: 'rgba(0,255,213,0.5)', letterSpacing: 2, fontFamily: "'Orbitron', sans-serif" }}>
-                          {g.prev_jodi_result || g.yesterday_jodi || '--'}
-                        </div>
-                      </div>
-                      <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.15)' }} />
-                      <div style={{ flex: 1, textAlign: 'center' }}>
-                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>TODAY'S JODI</div>
-                        <div className="result-number" style={{ fontSize: 15, fontWeight: 900, color: '#00ffd5', letterSpacing: 2, fontFamily: "'Orbitron', sans-serif" }}>
-                          {formatDisawarResult(g)}
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 10, color: status.canPlay ? '#00cc44' : '#ff2244', fontWeight: 800, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, letterSpacing: 2 }}>
-                      <span style={{ width: 7, height: 7, background: status.canPlay ? '#00cc44' : '#ff2244', borderRadius: '50%', display: 'inline-block', boxShadow: status.canPlay ? '0 0 6px #00cc44' : '0 0 6px #ff2244' }}></span>
-                      {status.text.toUpperCase()}
-                    </div>
-                    <button onClick={() => status.canPlay && setSelectedDisawarGame(g)} disabled={!status.canPlay} className={status.canPlay ? 'play-btn-active' : 'play-btn-disabled'}>
-                      {status.canPlay && <span className="rotate-icon" style={{ fontSize: 12 }}>◀</span>}
-                      {status.canPlay ? 'PLAY NOW' : 'MARKET CLOSED'}
-                    </button>
-                    <button 
-                      onClick={() => onViewChart(g)}
-                      style={{ width: '100%', padding: '8px', border: '1.5px solid rgba(0,255,213,0.4)', borderRadius: '10px', background: 'rgba(0,255,213,0.08)', color: '#00ffd5', fontWeight: 800, fontSize: 12, cursor: 'pointer', marginTop: 8, letterSpacing: 1, textTransform: 'uppercase' }}
-                    >
-                      📊 VIEW CHART
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
+        <div style={{ padding: '8px 14px 4px' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#00ffd5', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, borderLeft: '3px solid #00ffd5', paddingLeft: 10 }}>Digit Games</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+            {DISAWAR_GAME_TYPES.slice(0, 2).map((gt, i) => (
+              <div key={i} className="dgt-cell anim-in" style={{ animationDelay: `${i * 0.05}s`, background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', padding: '28px 12px', borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1px solid rgba(0,255,213,0.15)', boxShadow: '0 4px 15px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }} onClick={() => onPlay(selectedDisawarGame, gt)}>
+                <div style={{ position: 'absolute', inset: 0, padding: 1.5, borderRadius: 14, background: 'linear-gradient(90deg, transparent 30%, rgba(0,255,213,0.6) 50%, transparent 70%)', backgroundSize: '250% 100%', animation: 'sweepRTL 2.8s linear infinite', WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude', pointerEvents: 'none' }} />
+                <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(0,255,213,0.05)', border: '1.5px solid rgba(0,255,213,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, marginBottom: 12 }}>{gt.icon}</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#FFD700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{gt.label}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>{gt.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#00ffd5', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, borderLeft: '3px solid #00ffd5', paddingLeft: 10 }}>Jodi Games</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {DISAWAR_GAME_TYPES.slice(2, 4).map((gt, i) => (
+              <div key={i} className="dgt-cell anim-in" style={{ animationDelay: `${(i+2) * 0.05}s`, background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', padding: '28px 12px', borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1px solid rgba(0,255,213,0.15)', boxShadow: '0 4px 15px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }} onClick={() => onPlay(selectedDisawarGame, gt)}>
+                <div style={{ position: 'absolute', inset: 0, padding: 1.5, borderRadius: 14, background: 'linear-gradient(90deg, transparent 30%, rgba(0,255,213,0.6) 50%, transparent 70%)', backgroundSize: '250% 100%', animation: 'sweepRTL 2.8s linear infinite', WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude', pointerEvents: 'none' }} />
+                <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(0,255,213,0.05)', border: '1.5px solid rgba(0,255,213,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, marginBottom: 12 }}>{gt.icon}</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#FFD700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{gt.label}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>{gt.desc}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
+
+  // ── HELPER TO RENDER GAMES LIST (SAME PAGE PAR) ──────────────────
+  const renderGamesList = (gamesList, isDisawarStyle = false) => {
+    if (loading) return <div style={{ textAlign: 'center', color: '#00ffd5', padding: 40, fontWeight: 700 }}>⏳ Loading Games...</div>;
+    if (gamesList.length === 0) return <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', padding: 40 }}>Koi game available nahi hai.</div>;
+
+    return gamesList.map(g => {
+      const status = isDisawarStyle ? getDisawarStatus(g) : getGameStatus(g);
+      return (
+        <div key={g.id} className="game-wrapper">
+          <div className="game-card-content">
+            
+            {isDisawarStyle ? (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div style={{ fontSize: 11, color: '#00ffd5', fontWeight: 800, background: 'rgba(0,255,213,0.1)', padding: '3px 12px', borderRadius: 4, border: '1px solid rgba(0,255,213,0.3)' }}>
+                  🕐 Close: {formatTime(g.close_time)}
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ fontSize: 10, color: '#00ffd5', fontWeight: 800, background: 'rgba(0,255,213,0.1)', padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(0,255,213,0.3)' }}>
+                  Open: {g.open_time}
+                </div>
+                <div style={{ position: 'relative' }} onMouseEnter={() => setTooltipInfo(g.id)} onMouseLeave={() => setTooltipInfo(null)} onClick={() => setTooltipInfo(tooltipInfo === g.id ? null : g.id)}>
+                  <div style={{ color: '#00ffd5', border: '1.5px solid rgba(0,255,213,0.6)', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, cursor: 'pointer', background: 'rgba(0,255,213,0.1)' }}>i</div>
+                  {tooltipInfo === g.id && (
+                    <div style={{ position: 'absolute', right: 0, top: 22, background: '#021a14', border: '1px solid rgba(0,255,213,0.4)', borderRadius: 6, padding: '6px 10px', color: '#fff', fontSize: 10, fontWeight: 700, zIndex: 50, whiteSpace: 'nowrap', boxShadow: '0 8px 16px rgba(0,0,0,0.8)' }}>
+                      <div style={{ marginBottom: 4 }}>🟢 Open: <span style={{ color: '#00ffd5' }}>{formatTime(g.open_time)}</span></div>
+                      <div>🔴 Close: <span style={{ color: '#00ffd5' }}>{formatTime(g.close_time)}</span></div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div style={{ textAlign: 'center' }}>
+              <div className="gc-name">
+                <span style={{ animation: 'none', background: 'none', WebkitTextFillColor: 'initial', textShadow: 'none' }}>{getGameIcon(g.name)}&nbsp;</span>
+                {renderWaveText(g.name)}
+              </div>
+            </div>
+
+            {isDisawarStyle ? (
+              <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', margin: '8px 0', gap: 8 }}>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>YESTERDAY'S JODI</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: 'rgba(0,255,213,0.5)', letterSpacing: 2, fontFamily: "'Orbitron', sans-serif" }}>{g.prev_jodi_result || g.yesterday_jodi || '--'}</div>
+                </div>
+                <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.15)' }} />
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>TODAY'S JODI</div>
+                  <div className="result-number" style={{ fontSize: 15, fontWeight: 900, color: '#00ffd5', letterSpacing: 2, fontFamily: "'Orbitron', sans-serif" }}>{formatDisawarResult(g)}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="result-number" style={{ textAlign: 'center', fontSize: 24, fontWeight: 900, color: '#00ffd5', margin: '4px 0 8px 0', letterSpacing: '3px', fontFamily: "'Orbitron', sans-serif" }}>
+                {formatResult(g)}
+              </div>
+            )}
+
+            <div style={{ fontSize: 10, color: status.canPlay ? '#00cc44' : '#ff2244', fontWeight: 800, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, letterSpacing: 2 }}>
+              <span style={{ width: 7, height: 7, background: status.canPlay ? '#00cc44' : '#ff2244', borderRadius: '50%', display: 'inline-block', boxShadow: status.canPlay ? '0 0 6px #00cc44' : '0 0 6px #ff2244' }}></span>
+              {status.text.toUpperCase()}
+            </div>
+
+            <button onClick={() => status.canPlay && (isDisawarStyle ? setSelectedDisawarGame(g) : onPlay(g))} disabled={!status.canPlay} className={status.canPlay ? 'play-btn-active' : 'play-btn-disabled'}>
+              {status.canPlay && <span className="rotate-icon" style={{ fontSize: 12 }}>◀</span>}
+              {status.canPlay ? 'PLAY NOW' : 'MARKET CLOSED'}
+            </button>
+            
+            <button onClick={() => onViewChart(g)} style={{ width: '100%', padding: '8px', border: '1.5px solid rgba(0,255,213,0.4)', borderRadius: '10px', background: 'rgba(0,255,213,0.08)', color: '#00ffd5', fontWeight: 800, fontSize: 12, cursor: 'pointer', marginTop: 8, letterSpacing: 1, textTransform: 'uppercase' }}>
+              📊 VIEW CHART
+            </button>
+          </div>
+        </div>
+      );
+    });
+  };
 
   // ── MAIN HOME ─────────────────────────────────────────────────
   return (
@@ -531,15 +447,8 @@ if (showDisawar) {
       onTouchStart={handleTouchStart} 
       onTouchMove={handleTouchMove} 
       onTouchEnd={handleTouchEnd}
-      style={{ 
-        paddingBottom: 80, 
-        backgroundColor: '#021a14', 
-        minHeight: '100vh', 
-        color: '#fff', 
-        fontFamily: "'Poppins', sans-serif" 
-      }}
+      style={{ paddingBottom: 80, backgroundColor: '#021a14', minHeight: '100vh', color: '#fff', fontFamily: "'Poppins', sans-serif" }}
     >
-      
       {isAdminImpersonating && (
         <button onClick={backToAdmin} style={{ position: 'fixed', top: 10, right: 10, zIndex: 9999, background: '#0d1b5e', color: '#FFD700', padding: '8px 16px', borderRadius: 8, fontWeight: 800, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', cursor: 'pointer' }}>
           ⬅️ Back to Admin
@@ -547,92 +456,23 @@ if (showDisawar) {
       )}
 
       <style>{`
-        @keyframes scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .infinite-slider {
-          display: flex; gap: 10px; width: max-content;
-          animation: scroll 15s linear infinite;
-        }
+        @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .infinite-slider { display: flex; gap: 10px; width: max-content; animation: scroll 15s linear infinite; }
         .infinite-slider:hover { animation-play-state: paused; }
-
-        @keyframes spinIcon {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(-360deg); }
-        }
+        @keyframes spinIcon { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
         .rotate-icon { display: inline-block; animation: spinIcon 2s linear infinite; }
-
-        .top-btn-wrapper {
-          flex: 1; position: relative; border-radius: 25px; overflow: hidden;
-          padding: 2px; box-shadow: 0 4px 10px rgba(0,255,213,0.25);
-          transition: transform 0.2s ease;
-        }
-        .top-btn-wrapper:hover { transform: translateY(-3px); }
-        .top-btn-inner {
-          width: 100%; height: 100%; padding: 10px;
-          background: linear-gradient(145deg, #021a14, #063d35);
-          border: none; border-radius: 3px; color: #00ffd5; font-weight: 900; font-size: 12px; 
-          cursor: pointer; display: flex; align-items: center; justify-content: center; 
-          gap: 6px; letter-spacing: 1px; position: relative; z-index: 2;
-        }
-
-        .game-wrapper {
-          position: relative; border-radius: 10px; margin-bottom: 12px;
-          box-shadow: 0 4px 12px rgba(0,255,213,0.15); 
-          transition: transform 0.2s ease, box-shadow 0.3s ease;
-          overflow: hidden; padding: 2.5px;
-        }
-        .game-wrapper:hover { 
-          transform: translateY(-3px); 
-          box-shadow: 
-            0 0 5px rgba(0, 255, 213, 0.8),
-            0 0 15px rgba(0, 255, 213, 0.6),
-            0 0 30px rgba(0, 255, 213, 0.4);
-        }
-        .game-card-content {
-          position: relative; background: linear-gradient(145deg, #021a14, #063d35);
-          border-radius: 8px; padding: 10px 12px; z-index: 2; height: 100%; display: flex; flex-direction: column; justify-content: center;
-        }
-
-        .play-btn-active {
-          width: 100%; padding: 10px; border: none; border-radius: 10px 40px 10px 40px;
-          color: #001a17; font-weight: 900; font-size: 13px; cursor: pointer; 
-          display: flex; align-items: center; justify-content: center; gap: 6px;
-          background: linear-gradient(90deg, #14f4ce, #e0800b);
-          transition: all 0.3s ease; letter-spacing: 2px;
-          text-transform: uppercase; box-shadow: none; position: relative; overflow: hidden; 
-        }
-        .play-btn-active:hover { transform: scale(1.02); box-shadow: none; }
-        .play-btn-active::before {
-          content: ""; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-          background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.7), transparent);
-          animation: shineMove 2.5s infinite linear;
-        }
+        .game-wrapper { position: relative; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,255,213,0.15); transition: transform 0.2s ease, box-shadow 0.3s ease; overflow: hidden; padding: 2.5px; }
+        .game-wrapper:hover { transform: translateY(-3px); box-shadow: 0 0 5px rgba(0, 255, 213, 0.8), 0 0 15px rgba(0, 255, 213, 0.6), 0 0 30px rgba(0, 255, 213, 0.4); }
+        .game-card-content { position: relative; background: linear-gradient(145deg, #021a14, #063d35); border-radius: 8px; padding: 10px 12px; z-index: 2; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+        .play-btn-active { width: 100%; padding: 10px; border: none; border-radius: 10px 40px 10px 40px; color: #001a17; font-weight: 900; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; background: linear-gradient(90deg, #14f4ce, #e0800b); transition: all 0.3s ease; letter-spacing: 2px; text-transform: uppercase; box-shadow: none; position: relative; overflow: hidden; }
+        .play-btn-active::before { content: ""; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.7), transparent); animation: shineMove 2.5s infinite linear; }
         @keyframes shineMove { 0% { left: -100%; } 100% { left: 100%; } }
-
-        .play-btn-disabled {
-          width: 100%; padding: 10px; background: #69e2a6; 
-          border: 1px solid rgba(0,255,213,0.1); border-radius: 10px 40px 10px 40px;
-          color: #3a5a4a; font-weight: 900; font-size: 13px; cursor: not-allowed; 
-          display: flex; align-items: center; justify-content: center; gap: 6px;
-          box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); text-transform: uppercase;
-        }
-
+        .play-btn-disabled { width: 100%; padding: 10px; background: #69e2a6; border: 1px solid rgba(0,255,213,0.1); border-radius: 10px 40px 10px 40px; color: #3a5a4a; font-weight: 900; font-size: 13px; cursor: not-allowed; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); text-transform: uppercase; }
         @keyframes resultGlow { from { text-shadow: 0 0 5px #00ffd5; } to { text-shadow: 0 0 20px #00aaff; } }
         .result-number { animation: resultGlow 1.5s infinite alternate; }
-
-        .gc-name {
-          font-family: 'Poppins', sans-serif; font-size: 22px; font-weight: 900; letter-spacing: 2px;
-          position: relative; display: inline-block; text-transform: uppercase;
-          background: linear-gradient(180deg, #fff2a8, #ffd700, #ff9900);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-          text-shadow: 0 2px 0 #cc9900, 0 4px 10px rgba(0,0,0,0.6); margin-top: 2px;
-        }
+        .gc-name { font-family: 'Poppins', sans-serif; font-size: 22px; font-weight: 900; letter-spacing: 2px; position: relative; display: inline-block; text-transform: uppercase; background: linear-gradient(180deg, #fff2a8, #ffd700, #ff9900); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 2px 0 #cc9900, 0 4px 10px rgba(0,0,0,0.6); margin-top: 2px; }
         .gc-name span { display: inline-block; }
         @keyframes wave { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-
-        /* Slider Indicators */
         .slider-dot { width: 10px; height: 10px; borderRadius: 50%; background: rgba(0,255,213,0.3); transition: all 0.3s ease; }
         .slider-dot.active { background: #00ffd5; width: 24px; borderRadius: 5px; box-shadow: 0 0 8px rgba(0,255,213,0.6); }
       `}</style>
@@ -646,29 +486,20 @@ if (showDisawar) {
 
       <div style={{ padding: '12px 12px 0 12px' }}>
         
-        {/* ✅ NEW SLIDER TAB BUTTONS (REPLACES ADD/WITHDRAW) */}
+        {/* ✅ SLIDER TAB BUTTONS */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 14, background: 'rgba(0,0,0,0.4)', padding: 4, borderRadius: 14, border: '1px solid rgba(0,255,213,0.2)' }}>
-          <button 
-            onClick={() => setActiveView(0)} 
-            style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 0 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 0 ? '#00ffd5' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 0 ? '0 4px 10px rgba(0,255,213,0.3)' : 'none', textTransform: 'uppercase' }}
-          >
+          <button onClick={() => setActiveView(0)} style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 0 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 0 ? '#00ffd5' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 0 ? '0 4px 10px rgba(0,255,213,0.3)' : 'none', textTransform: 'uppercase' }}>
             🏠 Main Bazar
           </button>
-          <button 
-            onClick={() => { setActiveView(1); navigate && navigate('starline'); }} 
-            style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 1 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 1 ? '#00ffd5' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 1 ? '0 4px 10px rgba(0,255,213,0.3)' : 'none', textTransform: 'uppercase' }}
-          >
+          <button onClick={() => setActiveView(1)} style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 1 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 1 ? '#00ffd5' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 1 ? '0 4px 10px rgba(0,255,213,0.3)' : 'none', textTransform: 'uppercase' }}>
             ⭐ Starline
           </button>
-          <button 
-            onClick={() => { setActiveView(2); setShowDisawar(true); }} 
-            style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 2 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 2 ? '#00ffd5' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 2 ? '0 4px 10px rgba(0,255,213,0.3)' : 'none', textTransform: 'uppercase' }}
-          >
+          <button onClick={() => setActiveView(2)} style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 2 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 2 ? '#00ffd5' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 2 ? '0 4px 10px rgba(0,255,213,0.3)' : 'none', textTransform: 'uppercase' }}>
             🎯 Disawar
           </button>
         </div>
 
-        {/* BANNER SLIDER (Premium Blue) */}
+        {/* BANNER SLIDER */}
         <div style={{ overflow: 'hidden', marginBottom: 14, borderRadius: 14, height: 115, position: 'relative', boxShadow: '0 6px 22px rgba(26,58,110,0.30)' }}>
           {banners.map((b, i) => (
             <div key={i} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', padding: '0 22px', background: b.bg, opacity: currentSlide === i ? 1 : 0, transition: 'opacity 0.5s ease', pointerEvents: currentSlide === i ? 'auto' : 'none' }}>
@@ -687,116 +518,19 @@ if (showDisawar) {
           </div>
         </div>
 
-        {/* ✅ SWIPE DIRECTION INDICATOR */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginBottom: 14, opacity: 0.6 }}>
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>◀ SWIPE FOR STARLINE</span>
-          <div className="slider-dot active"></div>
-          <div className="slider-dot"></div>
-          <div className="slider-dot"></div>
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>SWIPE FOR DISAWAR ▶</span>
+        {/* ✅ SWIPE DOTS INDICATOR */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <div className={`slider-dot ${activeView === 0 ? 'active' : ''}`}></div>
+          <div className={`slider-dot ${activeView === 1 ? 'active' : ''}`}></div>
+          <div className={`slider-dot ${activeView === 2 ? 'active' : ''}`}></div>
         </div>
 
-        {/* GAMES LIST */}
-        {loading ? (
-          <div style={{ textAlign: 'center', color: '#00ffd5', padding: 40, fontWeight: 700 }}>⏳ Loading Games...</div>
-        ) : games.length === 0 ? (
-          <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', padding: 40 }}>Koi game available nahi hai.</div>
-        ) : (
-          games.map(g => {
-            const status = getGameStatus(g);
-            return (
-              <div key={g.id} className="game-wrapper">
-                <div className="game-card-content">
-                  
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ 
-                      fontSize: 10, color: '#00ffd5', fontWeight: 800,
-                      background: 'rgba(0,255,213,0.1)', padding: '2px 8px',
-                      borderRadius: 4, border: '1px solid rgba(0,255,213,0.3)'
-                    }}>
-                      Open: {g.open_time}
-                    </div>
-                    
-                    <div 
-                      style={{ position: 'relative' }} 
-                      onMouseEnter={() => setTooltipInfo(g.id)}
-                      onMouseLeave={() => setTooltipInfo(null)}
-                      onClick={() => setTooltipInfo(tooltipInfo === g.id ? null : g.id)}
-                    >
-                      <div style={{ 
-                        color: '#00ffd5', border: '1.5px solid rgba(0,255,213,0.6)', borderRadius: '50%', 
-                        width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                        fontSize: 10, fontWeight: 900, cursor: 'pointer', background: 'rgba(0,255,213,0.1)'
-                      }}>i</div>
-                      
-                      {tooltipInfo === g.id && (
-                        <div style={{ 
-                          position: 'absolute', right: 0, top: 22,
-                          background: '#021a14', border: '1px solid rgba(0,255,213,0.4)',
-                          borderRadius: 6, padding: '6px 10px', 
-                          color: '#fff', fontSize: 10, fontWeight: 700, zIndex: 50, 
-                          whiteSpace: 'nowrap', boxShadow: '0 8px 16px rgba(0,0,0,0.8)'
-                        }}>
-                          <div style={{ marginBottom: 4 }}>🟢 Open: <span style={{ color: '#00ffd5' }}>{formatTime(g.open_time)}</span></div>
-                          <div>🔴 Close: <span style={{ color: '#00ffd5' }}>{formatTime(g.close_time)}</span></div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div style={{ textAlign: 'center' }}>
-                    <div className="gc-name">
-                      <span style={{ animation: 'none', background: 'none', WebkitTextFillColor: 'initial', textShadow: 'none' }}>
-                         {getGameIcon(g.name)}&nbsp;
-                      </span>
-                      {renderWaveText(g.name)}
-                    </div>
-                  </div>
-
-                  <div className="result-number" style={{ 
-                    textAlign: 'center', fontSize: 24, fontWeight: 900, color: '#00ffd5', 
-                    margin: '4px 0 8px 0', letterSpacing: '3px',
-                    fontFamily: "'Orbitron', sans-serif"
-                  }}>
-                    {formatResult(g)}
-                  </div>
-
-                  <div style={{ 
-                    fontSize: 10,
-                    color: status.canPlay ? '#00cc44' : '#ff2244', 
-                    fontWeight: 800, marginBottom: 10,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                    letterSpacing: 2
-                  }}>
-                    <span style={{ 
-                      width: 7, height: 7,
-                      background: status.canPlay ? '#00cc44' : '#ff2244', 
-                      borderRadius: '50%', display: 'inline-block',
-                      boxShadow: status.canPlay ? '0 0 6px #00cc44' : '0 0 6px #ff2244'
-                    }}></span>
-                    {status.text.toUpperCase()}
-                  </div>
-
-                  <button 
-                    onClick={() => status.canPlay && onPlay(g)} 
-                    disabled={!status.canPlay} 
-                    className={status.canPlay ? 'play-btn-active' : 'play-btn-disabled'}
-                  >
-                    {status.canPlay && <span className="rotate-icon" style={{ fontSize: 12 }}>◀</span>}
-                    {status.canPlay ? 'PLAY NOW' : 'MARKET CLOSED'}
-                  </button>
-                  <button 
-                    onClick={() => onViewChart(g)}
-                    style={{ width: '100%', padding: '8px', border: '1.5px solid rgba(0,255,213,0.4)', borderRadius: '10px', background: 'rgba(0,255,213,0.08)', color: '#00ffd5', fontWeight: 800, fontSize: 12, cursor: 'pointer', marginTop: 8, letterSpacing: 1, textTransform: 'uppercase' }}
-                  >
-                    📊 VIEW CHART
-                  </button>
-
-                </div>
-              </div>
-            );
-          })
-        )}
+        {/* ✅ CONDITIONAL GAMES RENDERING ON SAME PAGE */}
+        <div style={{ transition: 'all 0.3s ease' }}>
+          {activeView === 0 && renderGamesList(games)}
+          {activeView === 1 && renderGamesList(starlineGames)}
+          {activeView === 2 && renderGamesList(disawarGames, true)}
+        </div>
       </div>
     </div>
   );
