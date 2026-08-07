@@ -16,7 +16,9 @@ const DISAWAR_GAME_TYPES = [
 
 // ── Starline specific game types ─────────────────────────────────────────────
 const STARLINE_GAME_TYPES = GAME_TYPES.filter(gt =>
-  ['single_digit', 'single_pana', 'double_pana', 'triple_pana'].includes(gt.id)
+  ['single_digit', 'single_pana', 'double_pana', 'triple_pana',
+   'single_pana_bulk', 'double_pana_bulk', 'sp_common', 'dp_common',
+   'sp_dp_tp', 'family_pana', 'odd_even'].includes(gt.id)
 );
 
 export default function GameTypePage({ game, onSelect }) {
