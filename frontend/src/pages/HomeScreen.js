@@ -19,7 +19,8 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
   const [selectedDisawarGame, setSelectedDisawarGame] = useState(null);
   const [showDeposit, setShowDeposit] = useState(false);
   const [tooltipInfo, setTooltipInfo] = useState(null);
-  
+  const sliderTouchStartX = useRef(0);
+const sliderTouchEndX = useRef(0);
   const [activeView, setActiveView] = useState(0);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
@@ -537,20 +538,21 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
       <div style={{ padding: '-12px -12px 0 -12px' }}>
 
         {/*  SLIDER */}
-        <div 
+       {/*  SLIDER */}
+<div 
   style={{ overflow: 'hidden', borderRadius: '14px 14px 0 0', height: 200, position: 'relative', margin: '0 -12px', marginBottom: '-20px' }}
-  onTouchStart={e => { e.stopPropagation(); touchStartX.current = e.touches[0].clientX; touchEndX.current = 0; }}
-  onTouchMove={e => { e.stopPropagation(); touchEndX.current = e.touches[0].clientX; }}
-  onTouchEnd={e => {
-    e.stopPropagation();
-    if (!touchStartX.current || !touchEndX.current) return;
-    const distance = touchStartX.current - touchEndX.current;
+  onTouchStart={e => { sliderTouchStartX.current = e.touches[0].clientX; sliderTouchEndX.current = 0; }}
+  onTouchMove={e => { sliderTouchEndX.current = e.touches[0].clientX; }}
+  onTouchEnd={() => {
+    if (!sliderTouchStartX.current || !sliderTouchEndX.current) return;
+    const distance = sliderTouchStartX.current - sliderTouchEndX.current;
     if (distance > 40) setCurrentSlide(prev => (prev + 1) % slides.length);
     else if (distance < -40) setCurrentSlide(prev => (prev - 1 + slides.length) % slides.length);
-    touchStartX.current = 0;
-    touchEndX.current = 0;
+    sliderTouchStartX.current = 0;
+    sliderTouchEndX.current = 0;
   }}
 >
+
           {slides.map((b, i) => (
             <div key={i} style={{ 
   position: 'absolute', 
