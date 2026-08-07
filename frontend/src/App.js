@@ -605,7 +605,7 @@ export default function App() {
   const isDisawarHome = returnToDisawar && cat === 'disawar';
   setReturnToDisawar(false);
   setShowDisawarOnHome(isDisawarHome);
-  const backPage = cat==='starline'?'starline':cat==='jackpot'?'jackpot': isDisawarHome ? 'home' : cat==='disawar'?'disawar':'home';
+  const backPage = cat==='starline'?'home':cat==='jackpot'?'jackpot': isDisawarHome ? 'home' : cat==='disawar'?'disawar':'home';
   setPage(backPage); setSelectedGame(null); setSelectedType(null);
         } else {
           showToast(result.message || 'Bulk bid failed!', 'err');
@@ -634,7 +634,7 @@ const cat = selectedGame?.game_category;
 const isDisawarHome = returnToDisawar && cat === 'disawar';
 setReturnToDisawar(false);
 setShowDisawarOnHome(isDisawarHome);
-const backPage = cat==='starline'?'starline':cat==='jackpot'?'jackpot': isDisawarHome ? 'home' : cat==='disawar'?'disawar':'home';
+const backPage = cat==='starline'?'home':cat==='jackpot'?'jackpot': isDisawarHome ? 'home' : cat==='disawar'?'disawar':'home';
 setPage(backPage); setSelectedGame(null); setSelectedType(null);
 
     } catch {
@@ -795,8 +795,8 @@ setPage(backPage); setSelectedGame(null); setSelectedType(null);
       
       {page === 'bet-form'   && <BetForm game={selectedGame} gameType={selectedType} wallet={wallet} onSubmit={handleBidSubmit} />}
             {page === 'chart'     && <ChartPage game={selectedGame} apiCall={apiCall} />}
-      {page === 'starline'   && <CategoryGamesScreen category="starline" onPlay={g => { setSelectedGame(g); setPage('game-types'); }} />}
-      {page === 'jackpot'    && <CategoryGamesScreen category="jackpot" apiCategory="disawar" onPlay={g => { setSelectedGame(g); setPage('game-types'); }} />}
+{page === 'starline' && <CategoryGamesScreen category="starline" onPlay={g => { setSelectedGame(g); setPage('game-types'); setTab('game'); window.scrollTo(0,0); }} />}   
+     {page === 'jackpot'    && <CategoryGamesScreen category="jackpot" apiCategory="disawar" onPlay={g => { setSelectedGame(g); setPage('game-types'); }} />}
       {page === 'disawar'    && <CategoryGamesScreen category="disawar" onPlay={g => { setSelectedGame(g); setPage('game-types'); }} />}
       {page === 'bids'       && <BidsPage apiCall={apiCall}/>}
       {page === 'txns'       && <TxnsPage apiCall={apiCall} navigate={navigate}/>}
