@@ -728,7 +728,7 @@ setPage(backPage); setSelectedGame(null); setSelectedType(null);
     <>
       <style>{`
         .topnav { background: linear-gradient(135deg, #021a14, #063d35) !important; border-bottom: 1px solid rgba(0,255,213,0.1) !important; box-shadow: 0 2px 12px rgba(0,255,213,0.08) !important; }
-        .brand { color: #fff !important; text-shadow: 0 1px 6px rgba(0,255,213,0.15) !important; font-family: 'Baloo 2','Nunito',sans-serif !important; letter-spacing: 2px !important; }
+        .brand { color: #f4f13e !important; text-shadow: 0 1px 6px rgba(0,255,213,0.15) !important; font-family: 'Baloo 2','Nunito',sans-serif !important; letter-spacing: 2px !important; }
         .back-btn { color: #fff !important; }
         .hamburger span { background: #00ffd5 !important; }
         .tn-wallet { background: rgba(0,255,213,0.1) !important; border: 1.5px solid rgba(0,255,213,0.25) !important; border-radius: 20px !important; }
@@ -760,7 +760,7 @@ setPage(backPage); setSelectedGame(null); setSelectedType(null);
         <div className="tn-right">
           {!isTxnTab && (
             <div className="tn-wallet" onClick={() => { fetchWallet(); setPage('wallet'); setTab('wallet'); }}>
-              <span>💼</span>
+              <span>🪙</span>
               <span>Rs.{wallet.toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 })}</span>
             </div>
           )}
