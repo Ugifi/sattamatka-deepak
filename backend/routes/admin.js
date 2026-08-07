@@ -323,8 +323,6 @@ router.put('/deposits/:id', [
   body('action').isIn(['approve', 'reject'])
 ], async (req, res) => {
   const { action, note } = req.body;
-  const depositAmount = dep.amount;
-  const REFERRAL_BONUS = depositAmount >= 500 ? Math.floor(depositAmount * 0.05) : 0; // 5% only if deposit >= 500
 
   const conn = await db.getConnection();
   try {
@@ -337,6 +335,9 @@ router.put('/deposits/:id', [
     if (!rows.length) { await conn.rollback(); return res.status(404).json({ success: false, message: 'Request not found' }); }
 
     const dep = rows[0];
+    const depositAmount = dep.amount;
+    const REFERRAL_BONUS = depositAmount >= 500 ? Math.floor(depositAmount * 0.05) : 0;
+
     if (dep.status !== 'pending') {
       await conn.rollback();
       return res.status(400).json({ success: false, message: `Already ${dep.status}` });
@@ -362,7 +363,6 @@ router.put('/deposits/:id', [
 
       if (pendingBonus.length) {
         const bonus = pendingBonus[0];
-
         if (REFERRAL_BONUS > 0) {
           await conn.query(
             'UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?',
@@ -374,7 +374,6 @@ router.put('/deposits/:id', [
             [bonus.referrer_id, REFERRAL_BONUS]
           );
         }
-
         await conn.query(
           "UPDATE referral_bonuses SET status = 'credited', bonus_amount = ?, credited_at = NOW() WHERE id = ?",
           [REFERRAL_BONUS, bonus.id]
