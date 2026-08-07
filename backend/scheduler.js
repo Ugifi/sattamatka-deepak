@@ -103,6 +103,26 @@ async function declareResult(game, openResult, closeResult) {
       [openResult, closeResult, jodiResult, game.id]
     );
 
+    // ── CHART DATA SAVE LOGIC ──────────────────────────────────────────
+    // Scheduler bhi result declare kare toh game_results mein save kare
+    try {
+      const todayDate = new Date().toISOString().split('T')[0];
+      await conn.query(
+        `INSERT INTO game_results (game_id, result_date, open_result, close_result, jodi_result, open_digit, close_digit, result_source)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduler')
+         ON DUPLICATE KEY UPDATE 
+           open_result = VALUES(open_result), 
+           close_result = VALUES(close_result), 
+           jodi_result = VALUES(jodi_result),
+           open_digit = VALUES(open_digit),
+           close_digit = VALUES(close_digit)`,
+        [game.id, todayDate, openResult, closeResult, jodiResult, openDigit, closeDigit]
+      );
+    } catch (chartErr) {
+      console.error(`❌ Scheduler Chart save error for ${game.name}:`, chartErr.message);
+    }
+    // ────────────────────────────────────────────────────────────────────
+
     const [bids] = await conn.query(
       "SELECT * FROM bids WHERE game_id=? AND status='pending'",
       [game.id]
@@ -256,12 +276,120 @@ cron.schedule('* * * * *', () => {
 }, { timezone: 'Asia/Kolkata' });
 
 // Raat 12 baje daily reset
-cron.schedule('0 0 * * *', () => {
+cron.schedule('0 2 * * *', () => {
   dailyReset();
 }, { timezone: 'Asia/Kolkata' });
 
 console.log('🤖 [SCHEDULER] MatkaKing Auto Result System STARTED');
 console.log('   → Har minute: open/close result check');
 console.log('   → Raat 12 baje: daily reset');
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  DISAWAR AUTO SYNC — lucky-satta.com (NAYA CODE — PURANA KUCH TOUCH NAHI)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const { syncDisawarResults } = require('./routes/scraper');
+
+// Har 5 minute mein Disawar results sync karo
+cron.schedule('*/5 * * * *', async () => {
+  try {
+    const result = await syncDisawarResults();
+    if (result.updated > 0) {
+      console.log(`✅ [DISAWAR SYNC] ${result.updated} games updated | Date: ${result.ist_date}`);
+      if (result.log && result.log.length) {
+        result.log.forEach(l => console.log(`   → ${l.game} | Jodi: ${l.jodi}`));
+      }
+    }
+  } catch (err) {
+    console.error('❌ [DISAWAR SYNC] Error:', err.message);
+  }
+}, { timezone: 'Asia/Kolkata' });
+
+// Raat 1 baje Disawar games reset (main reset 2 baje hota hai)
+cron.schedule('0 1 * * *', async () => {
+  try {
+    const disawarKeywords = ['desawar', 'gali', 'faridabad', 'gajiyabad', 'gaziyabad',
+                             'dwarka', 'alwar', 'sadar', 'gwalior', 'delhi bazar',
+                             'delhi matka', 'shri ganesh', 'shree ganesh', 'agra'];
+
+    const [allGames] = await db.query(
+      `SELECT id, name FROM games WHERE status != 'deleted'`
+    );
+
+    const disawarGames = allGames.filter(g => {
+      const n = g.name.toLowerCase();
+      return disawarKeywords.some(k => n.includes(k));
+    });
+
+    if (!disawarGames.length) return;
+
+    const ids = disawarGames.map(g => g.id);
+    const placeholders = ids.map(() => '?').join(',');
+
+    await db.query(
+      `UPDATE games
+       SET open_result        = NULL,
+           close_result       = NULL,
+           jodi_result        = NULL,
+           result_declared_at = NULL,
+           status             = 'open'
+       WHERE id IN (${placeholders})`,
+      ids
+    );
+
+    console.log(`🔄 [DISAWAR RESET] ${disawarGames.length} Disawar games reset (1 AM)`);
+  } catch (err) {
+    console.error('❌ [DISAWAR RESET] Error:', err.message);
+  }
+}, { timezone: 'Asia/Kolkata' });
+
+console.log('   → Har 5 min: Disawar auto sync (lucky-satta.com)');
+console.log('   → Raat 1 baje: Disawar games reset');
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+//  STARLINE AUTO SYNC — dpbossonline.com (NAYA CODE — PURANA KUCH TOUCH NAHI)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const { syncStarlineResults } = require('./routes/scraper');
+
+// Har 5 minute mein Starline results sync karo
+cron.schedule('*/5 * * * *', async () => {
+  try {
+    const result = await syncStarlineResults();
+    if (result.updated > 0) {
+      console.log(`✅ [STARLINE SYNC] ${result.updated} games updated | Date: ${result.ist_date}`);
+      if (result.log && result.log.length) {
+        result.log.forEach(l => console.log(`   → ${l.game} | Pana: ${l.pana} | Digit: ${l.digit}`));
+      }
+    }
+  } catch (err) {
+    console.error('❌ [STARLINE SYNC] Error:', err.message);
+  }
+}, { timezone: 'Asia/Kolkata' });
+
+// Raat 2 baje Starline reset (main reset ke saath)
+cron.schedule('5 2 * * *', async () => {
+  try {
+    await db.query(
+      `UPDATE games
+       SET open_result        = NULL,
+           close_result       = NULL,
+           jodi_result        = NULL,
+           result_declared_at = NULL,
+           result_date        = NULL,
+           status             = 'open'
+       WHERE game_category = 'starline' AND status != 'deleted'`
+    );
+    console.log('🔄 [STARLINE RESET] Starline games reset (2:05 AM)');
+  } catch (err) {
+    console.error('❌ [STARLINE RESET] Error:', err.message);
+  }
+}, { timezone: 'Asia/Kolkata' });
+
+console.log('   → Har 5 min: Starline auto sync (dpbossonline.com)');
+console.log('   → Raat 2:05 baje: Starline games reset');
+
+// ═══════════════════════════════════════════════════════════════════════════════
 
 module.exports = { declareResult, findBestResult };
