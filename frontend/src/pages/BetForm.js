@@ -324,6 +324,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const openDeclared  = !!game.open_result;
 const closeDeclared = !!game.close_result;
 const isCloseType = gameType.id === 'single_digit_close';
+const isStarlineGame = game?.game_category?.toLowerCase() === 'starline' || game?.category?.toLowerCase() === 'starline';
 const isDisawarType = ['single_digit', 'single_digit_close', 'jodi_digit', 'jodi_bulk'].includes(gameType.id);
 const defaultSession = (openDeclared || isCloseType || isDisawarType) ? 'close' : 'open';
   const [openClose, setOpenClose] = useState(defaultSession);
@@ -455,8 +456,9 @@ if (!isDisawarType && openDeclared && openClose === 'open') {      alert('Open r
       {submitting ? '⏳ Placing...' : `🎯 Place All Bids — ₹${totalAmt.toLocaleString()}`}
     </button>
   );
-
-  const SessionToggle = () => (
+const SessionToggle = () => {
+  if (isStarlineGame) return null;
+  return (
     <div className="bf-fg">
       <label className="bf-label">Select Session</label>
       {openDeclared && (
@@ -482,6 +484,7 @@ if (!isDisawarType && openDeclared && openClose === 'open') {      alert('Open r
       </div>
     </div>
   );
+};
 
   return (
     <div className="bf-wrap">
