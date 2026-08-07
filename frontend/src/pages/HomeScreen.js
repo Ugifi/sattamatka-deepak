@@ -578,14 +578,14 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
         </div>
 
         {/* SLIDER TAB BUTTONS */}
-        <div style={{ display: 'flex', gap: 10, margin: 3, marginbottom: '10px', background: 'rgba(0,0,0,0.4)', padding: 5, borderRadius: 14, border: '1px solid rgba(0,255,213,0.2)' }}>
-          <button onClick={() => setActiveView(1)} style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 1 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 1 ? '#ed121d' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 1 ? '0 4px 10px  #7dece8' : 'none', textTransform: 'uppercase' }}>
+        <div style={{ display: 'flex', gap: 10, margin: 6, marginbottom: '10px', background: 'rgba(79, 225, 199, 0.4)', padding: 5, borderRadius: 14, border: '1px solid rgba(0,255,213,0.2)' }}>
+          <button onClick={() => setActiveView(1)} style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 1 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 1 ? '#ed121d' : 'rgb(250, 248, 248)', boxShadow: activeView === 1 ? '0 4px 10px  #7dece8' : 'none', textTransform: 'uppercase' }}>
             ⭐ Starline
           </button>
-          <button onClick={() => setActiveView(0)} style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 0 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 0 ? '#ed121d' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 0 ? '0 4px 10px  #7dece8' : 'none', textTransform: 'uppercase' }}>
+          <button onClick={() => setActiveView(0)} style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 0 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 0 ? '#ed121d' : 'rgb(255, 255, 255)', boxShadow: activeView === 0 ? '0 4px 10px  #7dece8' : 'none', textTransform: 'uppercase' }}>
             🏠 Main Bazar
           </button>
-          <button onClick={() => setActiveView(2)} style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: 8, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 2 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 2 ? '#ed121d' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 2 ? '0 4px 10px #7dece8' : 'none', textTransform: 'uppercase' }}>
+          <button onClick={() => setActiveView(2)} style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: 8, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 2 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 2 ? '#ed121d' : 'rgb(255, 255, 255)', boxShadow: activeView === 2 ? '0 4px 10px #7dece8' : 'none', textTransform: 'uppercase' }}>
             🎯 Disawar
           </button>
         </div>
