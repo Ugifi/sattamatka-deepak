@@ -52,10 +52,14 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
   });
 
   const DISAWAR_GAME_TYPES = [
-    { id: 'single_digit',       label: 'Left Digit',  icon: '🎯', desc: 'Open result digit', win: 9,  numType: 'ank'      },
-    { id: 'single_digit_close', label: 'Right Digit', icon: '🎰', desc: 'Close result digit', win: 9,  numType: 'ank'      },
-    { id: 'jodi_digit',         label: 'Jodi',        icon: '🎲', desc: 'Two digit pair',     win: 90, numType: 'jodi'     },
-    { id: 'jodi_bulk',          label: 'Jodi Bulk',   icon: '📦', desc: 'Multiple Jodis',     win: 90, numType: 'jodi_bulk'},
+    { id: 'single_digit',       label: 'Left Digit',     icon: '🎯', desc: 'Open result digit',    win: '9.5',   numType: 'ank'       },
+    { id: 'single_digit_close', label: 'Right Digit',    icon: '🎰', desc: 'Close result digit',   win: '9.5',   numType: 'ank'       },
+    { id: 'jodi_digit',         label: 'Jodi',           icon: '🎲', desc: 'Two digit pair',        win: '95',    numType: 'jodi'      },
+    { id: 'jodi_bulk',          label: 'Jodi Bulk',      icon: '📦', desc: 'Multiple Jodis',        win: '95',    numType: 'jodi_bulk' },
+    { id: 'odd_even',           label: 'Odd / Even',     icon: '⚖️', desc: 'Odd ya Even pick karo', win: '2',     numType: 'odd_even'  },
+    { id: 'family_jodi',        label: 'Family Jodi',    icon: '👨‍👩‍👧', desc: 'Family jodi set',        win: '95',    numType: 'jodi'      },
+    { id: 'crossing_jodi',      label: 'Crossing Jodi',  icon: '✂️', desc: 'Crossing combination',  win: '95',    numType: 'jodi_bulk' },
+    { id: 'cycle_jodi',         label: 'Cycle Jodi',     icon: '🔄', desc: 'Cycle jodi set',        win: '95',    numType: 'jodi_bulk' },
   ];
 
  const slides = [
@@ -353,8 +357,11 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     ));
   };
 
-  // ── DISAWAR GAME TYPE SELECTION ───────────────────────────────
   if (selectedDisawarGame) {
+    const digitTypes  = DISAWAR_GAME_TYPES.slice(0, 2);
+    const jodiTypes   = DISAWAR_GAME_TYPES.slice(2, 4);
+    const extraTypes  = DISAWAR_GAME_TYPES.slice(4);
+
     return (
       <div className="screen" style={{ paddingBottom: 80, backgroundColor: '#021a14', minHeight: '100vh', color: '#fff', fontFamily: "'Poppins', sans-serif" }}>
         <style>{`
@@ -365,7 +372,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
           .dgt-cell:hover { transform: translateY(-3px) scale(1.02); border-color: rgba(0,255,213,0.5) !important; box-shadow: 0 0 20px rgba(0,255,213,0.15) !important; }
         `}</style>
 
-        <div style={{ background: 'linear-gradient(135deg, #1a3a6e, #2356b0)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ background: 'linear-gradient(135deg, #053c3a, #053c3a)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 100 }}>
           <button onClick={() => setSelectedDisawarGame(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
@@ -381,30 +388,51 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
           </div>
         </div>
 
-        <div style={{ padding: '8px 14px 4px' }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#00ffd5', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, borderLeft: '3px solid #00ffd5', paddingLeft: 10 }}>Digit Games</div>
+        <div style={{ padding: '8px 14px 20px' }}>
+
+          {/* DIGIT GAMES */}
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#FFD700', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, borderLeft: '3px solid #FFD700', paddingLeft: 10 }}>Digit Games</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-            {DISAWAR_GAME_TYPES.slice(0, 2).map((gt, i) => (
-              <div key={i} className="dgt-cell anim-in" style={{ animationDelay: `${i * 0.05}s`, background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', padding: '28px 12px', borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1px solid rgba(0,255,213,0.15)', boxShadow: '0 4px 15px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }} onClick={() => onPlay(selectedDisawarGame, gt)}>
-                <div style={{ position: 'absolute', inset: 0, padding: 1.5, borderRadius: 14, background: 'linear-gradient(90deg, transparent 30%, rgba(0,255,213,0.6) 50%, transparent 70%)', backgroundSize: '250% 100%', animation: 'sweepRTL 2.8s linear infinite', WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude', pointerEvents: 'none' }} />
-                <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(0,255,213,0.05)', border: '1.5px solid rgba(0,255,213,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, marginBottom: 12 }}>{gt.icon}</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#FFD700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{gt.label}</div>
+            {digitTypes.map((gt, i) => (
+              <div key={i} className="dgt-cell anim-in"
+                style={{ animationDelay: `${i * 0.05}s`, background: 'linear-gradient(145deg, rgba(2,26,20,0.95), rgba(6,61,53,0.9))', padding: '22px 12px', borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1.5px solid rgba(255,215,0,0.3)', boxShadow: '0 4px 15px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }}
+                onClick={() => onPlay(selectedDisawarGame, gt)}>
+                <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(255,215,0,0.15)', border: '1px solid rgba(255,215,0,0.4)', borderRadius: 8, padding: '2px 8px', fontSize: 10, fontWeight: 900, color: '#FFD700' }}>{gt.win}x</div>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,215,0,0.08)', border: '1.5px solid rgba(255,215,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 10 }}>{gt.icon}</div>
+                <div style={{ fontSize: 15, fontWeight: 900, color: '#FFD700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{gt.label}</div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>{gt.desc}</div>
               </div>
             ))}
           </div>
 
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#00ffd5', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, borderLeft: '3px solid #00ffd5', paddingLeft: 10 }}>Jodi Games</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            {DISAWAR_GAME_TYPES.slice(2, 4).map((gt, i) => (
-              <div key={i} className="dgt-cell anim-in" style={{ animationDelay: `${(i+2) * 0.05}s`, background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', padding: '28px 12px', borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1px solid rgba(0,255,213,0.15)', boxShadow: '0 4px 15px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }} onClick={() => onPlay(selectedDisawarGame, gt)}>
-                <div style={{ position: 'absolute', inset: 0, padding: 1.5, borderRadius: 14, background: 'linear-gradient(90deg, transparent 30%, rgba(0,255,213,0.6) 50%, transparent 70%)', backgroundSize: '250% 100%', animation: 'sweepRTL 2.8s linear infinite', WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude', pointerEvents: 'none' }} />
-                <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(0,255,213,0.05)', border: '1.5px solid rgba(0,255,213,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, marginBottom: 12 }}>{gt.icon}</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#FFD700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{gt.label}</div>
+          {/* JODI GAMES */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+            {jodiTypes.map((gt, i) => (
+              <div key={i} className="dgt-cell anim-in"
+                style={{ animationDelay: `${(i+2) * 0.05}s`, background: 'linear-gradient(145deg, rgba(2,26,20,0.95), rgba(6,61,53,0.9))', padding: '22px 12px', borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1.5px solid rgba(255,215,0,0.3)', boxShadow: '0 4px 15px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }}
+                onClick={() => onPlay(selectedDisawarGame, gt)}>
+                <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(255,215,0,0.15)', border: '1px solid rgba(255,215,0,0.4)', borderRadius: 8, padding: '2px 8px', fontSize: 10, fontWeight: 900, color: '#FFD700' }}>{gt.win}x</div>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,215,0,0.08)', border: '1.5px solid rgba(255,215,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 10 }}>{gt.icon}</div>
+                <div style={{ fontSize: 15, fontWeight: 900, color: '#FFD700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{gt.label}</div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>{gt.desc}</div>
               </div>
             ))}
           </div>
+
+          {/* MORE GAMES */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {extraTypes.map((gt, i) => (
+              <div key={i} className="dgt-cell anim-in"
+                style={{ animationDelay: `${(i+4) * 0.05}s`, background: 'linear-gradient(145deg, rgba(2,26,20,0.95), rgba(6,61,53,0.9))', padding: '22px 12px', borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1.5px solid rgba(255,215,0,0.3)', boxShadow: '0 4px 15px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' }}
+                onClick={() => onPlay(selectedDisawarGame, gt)}>
+                <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(255,215,0,0.15)', border: '1px solid rgba(255,215,0,0.4)', borderRadius: 8, padding: '2px 8px', fontSize: 10, fontWeight: 900, color: '#FFD700' }}>{gt.win}x</div>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,215,0,0.08)', border: '1.5px solid rgba(255,215,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 10 }}>{gt.icon}</div>
+                <div style={{ fontSize: 15, fontWeight: 900, color: '#FFD700', textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{gt.label}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>{gt.desc}</div>
+              </div>
+            ))}
+          </div>
+
         </div>
       </div>
     );
@@ -438,8 +466,8 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
             ) : (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ fontSize: 10, color: '#00ffd5', fontWeight: 800, background: 'rgba(0,255,213,0.1)', padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(0,255,213,0.3)' }}>
-                  Open: {g.open_time}
-                </div>
+  Open: {formatTime(g.open_time)}
+</div>
                 <div style={{ position: 'relative' }} onMouseEnter={() => setTooltipInfo(g.id)} onMouseLeave={() => setTooltipInfo(null)} onClick={() => setTooltipInfo(tooltipInfo === g.id ? null : g.id)}>
                   <div style={{ color: '#00ffd5', border: '1.5px solid rgba(0,255,213,0.6)', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, cursor: 'pointer', background: 'rgba(0,255,213,0.1)' }}>i</div>
                   {tooltipInfo === g.id && (
@@ -454,9 +482,9 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
 
             <div style={{ textAlign: 'center' }}>
               <div className="gc-name">
-                <span style={{ animation: 'none', background: 'none', WebkitTextFillColor: 'initial', textShadow: 'none' }}>{getGameIcon(g.name)}&nbsp;</span>
-                {renderWaveText(g.name)}
-              </div>
+  <span style={{ animation: 'none', background: 'none', WebkitTextFillColor: 'initial', textShadow: 'none' }}>{getGameIcon(g.name)}&nbsp;</span>
+  {hideOpenTime ? renderWaveText(formatTime(g.name)) : renderWaveText(g.name)}
+</div>
             </div>
 
             {isDisawarStyle ? (
