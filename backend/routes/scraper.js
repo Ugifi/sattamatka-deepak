@@ -344,6 +344,30 @@ async function syncResults() {
     
     await settleGameBids(dbGame.id, finalOpenRes, finalCloseRes);
 
+    // ── CHART DATA SAVE LOGIC ──────────────────────────────────────────
+    if (finalOpenRes && finalCloseRes) {
+      try {
+        const openDigit = String(finalOpenRes).split('').reduce((s, d) => s + parseInt(d), 0) % 10;
+        const closeDigit = String(finalCloseRes).split('').reduce((s, d) => s + parseInt(d), 0) % 10;
+        const finalJodi = `${openDigit}${closeDigit}`;
+
+        await db.query(
+          `INSERT INTO game_results (game_id, result_date, open_result, close_result, jodi_result, open_digit, close_digit, result_source)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'scraper')
+           ON DUPLICATE KEY UPDATE 
+             open_result = VALUES(open_result), 
+             close_result = VALUES(close_result), 
+             jodi_result = VALUES(jodi_result),
+             open_digit = VALUES(open_digit),
+             close_digit = VALUES(close_digit)`,
+          [dbGame.id, todayDate, finalOpenRes, finalCloseRes, finalJodi, openDigit, closeDigit]
+        );
+      } catch (chartErr) {
+        console.error(`❌ Chart save error for ${dbGame.name}:`, chartErr.message);
+      }
+    }
+    // ────────────────────────────────────────────────────────────────────
+
     updated++;
     log.push({ game: dbGame.name, result: item.result });
   }
@@ -359,6 +383,398 @@ async function syncResults() {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//  DISAWAR SCRAPER — lucky-satta.com se results (NAYA CODE — PURANA TOUCH NAHI)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+async function scrapeDisawarResults() {
+  const url = 'https://lucky-satta.com/chart-2026/delhi-bazar-satta-result';
+
+  let html;
+  try {
+    const res = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Connection': 'keep-alive',
+      },
+      timeout: 20000
+    });
+    html = res.data;
+  } catch (err1) {
+    console.log('⚠️ [DISAWAR] Scrape Error (Attempt 1):', err1.message, '| Retrying...');
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      const res = await axios.get(url, { timeout: 20000 });
+      html = res.data;
+    } catch (err2) {
+      console.log('❌ [DISAWAR] Scrape failed (Attempt 2):', err2.message);
+      return [];
+    }
+  }
+
+  const $ = cheerio.load(html);
+  const results = [];
+
+  // Table rows parse karo
+  $('table tr').each((i, row) => {
+    const cells = $(row).find('td');
+    if (cells.length < 2) return;
+
+    const nameCell   = $(cells[0]).text().trim();
+    const resultCell = $(cells[cells.length - 1]).text().trim();
+
+    // Game name — time hata do (newline se split)
+    const nameParts = nameCell.split('\n');
+    let gameName = nameParts[0].trim().toUpperCase().replace(/\s+/g, ' ');
+    if (!gameName || gameName.length < 2) return;
+
+    // "WAIT" ya empty skip karo
+    if (!resultCell || resultCell.toLowerCase().includes('wait') || resultCell.includes('✗')) return;
+
+    const resultClean = resultCell.replace(/[^0-9]/g, '').trim();
+    if (!resultClean) return;
+
+    // 2 digit jodi
+    if (/^\d{2}$/.test(resultClean)) {
+      results.push({ gameName, jodi: resultClean });
+    } else if (/^\d{1}$/.test(resultClean)) {
+      results.push({ gameName, jodi: resultClean.padStart(2, '0') });
+    }
+  });
+
+  console.log(`📊 [DISAWAR] Scraped ${results.length} results from lucky-satta.com`);
+  return results;
+}
+
+function isDisawarMatch(dbName, scrapedName) {
+  const normalize = (s) => s.toLowerCase().trim()
+    .replace(/\s+/g, ' ')
+    .replace(/gajiyabad|gaziabad/g, 'gaziyabad')
+    .replace(/shree|shri/g, 'shri')
+    .replace(/genesh|ganesh/g, 'ganesh');
+
+  const a = normalize(dbName);
+  const b = normalize(scrapedName);
+
+  if (a === b) return true;
+  if (a.includes(b) || b.includes(a)) return true;
+  return false;
+}
+
+async function syncDisawarResults() {
+  const scraped = await scrapeDisawarResults();
+  if (!scraped.length) {
+    return { success: false, message: '[DISAWAR] Kuch scrape nahi hua' };
+  }
+
+  const todayDate  = getISTDate();
+  const nowMinutes = getCurrentISTMinutes();
+
+  const disawarKeywords = ['desawar', 'gali', 'faridabad', 'gajiyabad', 'gaziyabad',
+                           'dwarka', 'alwar', 'sadar', 'gwalior', 'delhi bazar',
+                           'delhi matka', 'shri ganesh', 'shree ganesh', 'agra'];
+
+  const [dbGames] = await db.query(
+    `SELECT id, name, close_time, open_result, close_result, result_date
+     FROM games WHERE status != 'deleted'`
+  );
+
+  const disawarDbGames = dbGames.filter(g => {
+    const n = g.name.toLowerCase();
+    return disawarKeywords.some(k => n.includes(k));
+  });
+
+  let updated = 0, skipped = 0;
+  const log = [];
+
+  for (const item of scraped) {
+    const dbGame = disawarDbGames.find(g => isDisawarMatch(g.name, item.gameName));
+    if (!dbGame) {
+      console.log(`⚠️ [DISAWAR] DB mein nahi mila: "${item.gameName}"`);
+      continue;
+    }
+
+    // Close time nahi hua toh skip
+    const closeMin = timeToMinutes(dbGame.close_time);
+    if (closeMin && nowMinutes < closeMin) {
+      skipped++;
+      continue;
+    }
+
+    // Same result already hai toh skip
+    if (dbGame.close_result === item.jodi) {
+      skipped++;
+      continue;
+    }
+
+    const openDigit  = item.jodi[0];
+    const closeDigit = item.jodi[1];
+
+    try {
+      await db.query(
+        `UPDATE games SET 
+          open_result  = ?,
+          close_result = ?,
+          jodi_result  = ?,
+          result_date  = ?,
+          result_declared_at = CONVERT_TZ(NOW(), '+00:00', '+05:30')
+         WHERE id = ?`,
+        [openDigit, closeDigit, item.jodi, todayDate, dbGame.id]
+      );
+
+      // Chart table mein save — reset pe delete nahi hoga
+      await db.query(
+        `INSERT INTO game_results 
+          (game_id, result_date, open_result, close_result, jodi_result, open_digit, close_digit, result_source)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'disawar_scraper')
+         ON DUPLICATE KEY UPDATE
+           open_result  = VALUES(open_result),
+           close_result = VALUES(close_result),
+           jodi_result  = VALUES(jodi_result),
+           open_digit   = VALUES(open_digit),
+           close_digit  = VALUES(close_digit)`,
+        [dbGame.id, todayDate, openDigit, closeDigit, item.jodi, openDigit, closeDigit]
+      );
+
+      // Pending bids settle karo
+      await settleGameBids(dbGame.id, openDigit, closeDigit);
+
+      updated++;
+      log.push({ game: dbGame.name, jodi: item.jodi });
+      console.log(`✅ [DISAWAR] ${dbGame.name} | Jodi: ${item.jodi}`);
+
+    } catch (err) {
+      console.error(`❌ [DISAWAR] ${dbGame.name} update failed:`, err.message);
+    }
+  }
+
+  return {
+    success:  true,
+    message:  `[DISAWAR] ${updated} games updated`,
+    ist_date: todayDate,
+    updated,
+    skipped,
+    log
+  };
+}
+
+// Disawar API routes
+router.get('/disawar-preview', async (req, res) => {
+  try {
+    const data = await scrapeDisawarResults();
+    res.json({ success: true, total: data.length, date: getISTDate(), data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/sync-disawar', async (req, res) => {
+  try {
+    const result = await syncDisawarResults();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  STARLINE SCRAPER — dpbossonline.com se results
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Milan Starline URL → column headers se time match karenge
+const STARLINE_URL = 'https://dpbossonline.com/starline-panel/2/milan-starline';
+
+// DB game name → site column time mapping
+const STARLINE_TIME_MAP = {
+  '09:30': '9:30 AM',
+  '10:30': '10:30 AM',
+  '11:30': '11:30 AM',
+  '12:30': '12:30 PM',
+  '13:30': '1:30 PM',
+  '14:30': '2:30 PM',
+  '15:30': '3:30 PM',
+  '16:30': '4:30 PM',
+  '17:30': '5:30 PM',
+  '18:30': '6:30 PM',
+  '19:30': '7:30 PM',
+  '20:30': '8:30 PM',
+};
+
+async function scrapeStarlineResults() {
+  let html;
+  try {
+    const res = await axios.get('https://www.dpbossonline.com/starline-panel/2/milan-starline', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html',
+      },
+      timeout: 30000
+    });
+    html = res.data;
+  } catch (err1) {
+    console.log('⚠️ [STARLINE] Scrape Error (Attempt 1):', err1.message, '| Retrying...');
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      const res = await axios.get(STARLINE_URL, { timeout: 30000 });
+      html = res.data;
+    } catch (err2) {
+      console.log('❌ [STARLINE] Scrape failed (Attempt 2):', err2.message);
+      return {};
+    }
+  }
+
+  const $ = cheerio.load(html);
+  const results = {};
+
+  // Column index → DB game name mapping
+  const colIndexMap = {};
+  $('table thead tr th').each((i, el) => {
+    const text = $(el).text().trim();
+    for (const [dbTime, siteTime] of Object.entries(STARLINE_TIME_MAP)) {
+      if (text === siteTime) {
+        colIndexMap[i] = dbTime;
+        break;
+      }
+    }
+  });
+
+  console.log('📋 [STARLINE] Column map:', colIndexMap);
+
+  // Last row dhundo (aaj ka)
+  const rows = $('table tbody tr').toArray();
+  if (!rows.length) {
+    console.log('⚠️ [STARLINE] Koi row nahi mili');
+    return {};
+  }
+
+  const lastRow = rows[rows.length - 1];
+  const cells = $(lastRow).find('td');
+
+  cells.each((i, cell) => {
+    const dbTime = colIndexMap[i]; // col 0 = Date, col 1 = 9:30 AM etc
+    if (!dbTime) return;
+
+    const pana  = $(cell).find('div').text().trim();
+    const digit = $(cell).find('b').text().trim();
+
+    if (/^\d{3}$/.test(pana)) {
+      results[dbTime] = { pana, digit: /^\d$/.test(digit) ? digit : null };
+    }
+  });
+
+  console.log(`📊 [STARLINE] Scraped ${Object.keys(results).length} results`);
+  return results;
+}
+async function syncStarlineResults() {
+  const scraped = await scrapeStarlineResults();
+  if (!Object.keys(scraped).length) {
+    return { success: false, message: '[STARLINE] Kuch scrape nahi hua' };
+  }
+
+  const todayDate  = getISTDate();
+  const nowMinutes = getCurrentISTMinutes();
+
+  const [dbGames] = await db.query(
+    `SELECT id, name, close_time, open_result, close_result, result_date
+     FROM games WHERE game_category = 'starline' AND status != 'deleted'`
+  );
+
+  let updated = 0, skipped = 0;
+  const log = [];
+
+  for (const dbGame of dbGames) {
+    const gameName = dbGame.name.trim(); // e.g. '09:30'
+    const scraped_result = scraped[gameName];
+
+    if (!scraped_result) {
+      skipped++;
+      continue;
+    }
+
+    // Close time check
+    const closeMin = timeToMinutes(dbGame.close_time);
+    if (closeMin && nowMinutes < closeMin) {
+      skipped++;
+      continue;
+    }
+
+    // Already same result hai toh skip
+    if (dbGame.open_result === scraped_result.pana) {
+      skipped++;
+      continue;
+    }
+
+    const { pana, digit } = scraped_result;
+
+    try {
+      await db.query(
+        `UPDATE games SET 
+          open_result = ?,
+          result_date = ?,
+          result_declared_at = CONVERT_TZ(NOW(), '+00:00', '+05:30')
+         WHERE id = ?`,
+        [pana, todayDate, dbGame.id]
+      );
+
+      // Chart table mein save
+      await db.query(
+        `INSERT INTO game_results 
+          (game_id, result_date, open_result, jodi_result, open_digit, result_source)
+         VALUES (?, ?, ?, ?, ?, 'starline_scraper')
+         ON DUPLICATE KEY UPDATE
+           open_result = VALUES(open_result),
+           jodi_result = VALUES(jodi_result),
+           open_digit  = VALUES(open_digit)`,
+        [dbGame.id, todayDate, pana, digit, digit]
+      );
+
+      // Pending bids settle karo
+      await settleGameBids(dbGame.id, pana, null);
+
+      updated++;
+      log.push({ game: gameName, pana, digit });
+      console.log(`✅ [STARLINE] ${gameName} | Pana: ${pana} | Digit: ${digit}`);
+
+    } catch (err) {
+      console.error(`❌ [STARLINE] ${gameName} update failed:`, err.message);
+    }
+  }
+
+  return {
+    success:  true,
+    message:  `[STARLINE] ${updated} games updated`,
+    ist_date: todayDate,
+    updated,
+    skipped,
+    log
+  };
+}
+
+// Starline API routes
+router.get('/starline-preview', async (req, res) => {
+  try {
+    const data = await scrapeStarlineResults();
+    res.json({ success: true, date: getISTDate(), data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/sync-starline', async (req, res) => {
+  try {
+    const result = await syncStarlineResults();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+// ═══════════════════════════════════════════════════════════════════════════════
+
 module.exports = router;
-module.exports.scrapeAllGames = scrapeAllGames;
-module.exports.syncResults    = syncResults;
+module.exports.scrapeAllGames        = scrapeAllGames;
+module.exports.syncResults           = syncResults;
+module.exports.syncDisawarResults    = syncDisawarResults;
+module.exports.syncStarlineResults   = syncStarlineResults;
+module.exports.scrapeStarlineResults = scrapeStarlineResults;
