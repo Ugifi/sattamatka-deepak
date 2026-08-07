@@ -19,8 +19,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
   const [selectedDisawarGame, setSelectedDisawarGame] = useState(null);
   const [showDeposit, setShowDeposit] = useState(false);
   const [tooltipInfo, setTooltipInfo] = useState(null);
-  const sliderTouchStartX = useRef(0);
-const sliderTouchEndX = useRef(0);
+  
   const [activeView, setActiveView] = useState(0);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
@@ -34,17 +33,16 @@ const sliderTouchEndX = useRef(0);
     touchEndX.current = e.touches[0].clientX;
   };
 
-  const handleTouchEnd = () => {
-    if (!touchStartX.current || !touchEndX.current) return;
-    const distance = touchStartX.current - touchEndX.current;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-    if (isLeftSwipe && activeView < 2) setActiveView(prev => prev + 1);
-    else if (isRightSwipe && activeView > 0) setActiveView(prev => prev - 1);
-    touchStartX.current = 0;
-    touchEndX.current = 0;
-  };
-
+ const handleTouchEnd = () => {
+  if (!touchStartX.current || !touchEndX.current) return;
+  const distance = touchStartX.current - touchEndX.current;
+  const isLeftSwipe = distance > 50;
+  const isRightSwipe = distance < -50;
+  if (isLeftSwipe) setActiveView(prev => (prev + 1) % 3);
+  else if (isRightSwipe) setActiveView(prev => (prev - 1 + 3) % 3);
+  touchStartX.current = 0;
+  touchEndX.current = 0;
+};
   const [settings, setSettings] = useState({
     site_name: 'MATKA KING',
     whatsapp: '9999999999',
@@ -497,7 +495,9 @@ const sliderTouchEndX = useRef(0);
   // ── MAIN HOME ──────────────────────────────────────────────────
   return (
     <div className="screen"
-      
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       style={{ paddingBottom: 80, backgroundColor: '#021a14', minHeight: '100vh', color: '#fff', fontFamily: "'Poppins', sans-serif" }}
     >
       {isAdminImpersonating && (
@@ -538,21 +538,7 @@ const sliderTouchEndX = useRef(0);
       <div style={{ padding: '-12px -12px 0 -12px' }}>
 
         {/*  SLIDER */}
-       {/*  SLIDER */}
-<div 
-  style={{ overflow: 'hidden', borderRadius: '14px 14px 0 0', height: 200, position: 'relative', margin: '0 -12px', marginBottom: '-20px' }}
-  onTouchStart={e => { sliderTouchStartX.current = e.touches[0].clientX; sliderTouchEndX.current = 0; }}
-  onTouchMove={e => { sliderTouchEndX.current = e.touches[0].clientX; }}
-  onTouchEnd={() => {
-    if (!sliderTouchStartX.current || !sliderTouchEndX.current) return;
-    const distance = sliderTouchStartX.current - sliderTouchEndX.current;
-    if (distance > 40) setCurrentSlide(prev => (prev + 1) % slides.length);
-    else if (distance < -40) setCurrentSlide(prev => (prev - 1 + slides.length) % slides.length);
-    sliderTouchStartX.current = 0;
-    sliderTouchEndX.current = 0;
-  }}
->
-
+        <div style={{ overflow: 'hidden', borderRadius: '14px 14px 0 0', height: 200, position: 'relative', margin: '0 -12px', marginBottom: '-20px' }}>
           {slides.map((b, i) => (
             <div key={i} style={{ 
   position: 'absolute', 
