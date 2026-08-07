@@ -4,7 +4,12 @@ import { GAME_TYPES } from '../data/gameData'; // ✅ FIX: Removed DISAWAR_GAME_
 
 export default function GameTypePage({ game, onSelect }) {
   // ✅ Used only GAME_TYPES to avoid import error
-  const activeGameTypes = GAME_TYPES;
+  const isStarline = game?.game_category?.toLowerCase() === 'starline' || 
+                   game?.category?.toLowerCase() === 'starline';
+
+const activeGameTypes = isStarline 
+  ? GAME_TYPES.filter(gt => ['single_digit', 'single_pana', 'double_pana', 'triple_pana'].includes(gt.id))
+  : GAME_TYPES;
 
   // 🔥 Wave Animation Generator for Labels 🔥
   const renderWaveText = (text) => {
