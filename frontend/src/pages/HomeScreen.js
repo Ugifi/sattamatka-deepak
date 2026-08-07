@@ -536,14 +536,14 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
         </marquee>
       </div>
 
-      <div style={{ padding: '3px 3px 0 3px' }}>
+      <div style={{ padding: '-12px -12px 0 -12px' }}>
 
         {/*  SLIDER */}
-        <div style={{ overflow: 'hidden', marginBottom: 14, borderRadius: 14, height: 200, position: 'relative', boxShadow: '0 6px 22px rgba(26,58,110,0.30)', margin: '0 -12px' }}>
+        <div style={{ overflow: 'hidden', borderRadius: '14px 14px 0 0', height: 200, position: 'relative', margin: '0 -12px', marginBottom: '-20px' }}>
           {slides.map((b, i) => (
             <div key={i} style={{ 
   position: 'absolute', 
-  inset: 0, 
+  inset: 1, 
   opacity: currentSlide === i ? 1 : 0, 
   transition: 'opacity 0.5s ease', 
   pointerEvents: currentSlide === i ? 'auto' : 'none'
@@ -553,8 +553,9 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
                 alt={`-${i}`}
                 onError={(e) => { e.target.style.display = 'none'; }}
                style={{ 
-  width: '100%', 
-  height: '100%', 
+  width: '95%', 
+  marginLeft: '10px',
+  height: '90%', 
   objectFit: 'fill',
   display: 'block',
   borderRadius: 14
@@ -562,7 +563,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
               />
             </div>
           ))}
-          <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5 }}>
+          <div style={{ position: 'absolute', bottom: 30, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 5 }}>
             {slides.map((_, i) => (
               <div key={i} onClick={() => setCurrentSlide(i)} style={{ width: 7, height: 7, borderRadius: 4, background: currentSlide === i ? '#fff' : 'rgba(255,255,255,0.35)', transition: 'all 0.3s', cursor: 'pointer' }} />
             ))}
@@ -570,7 +571,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
         </div>
 
         {/* SLIDER TAB BUTTONS */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 6,margin: 6, background: 'rgba(0,0,0,0.4)', padding: 3, borderRadius: 14, border: '1px solid rgba(0,255,213,0.2)' }}>
+        <div style={{ display: 'flex', gap: 6, margin: 6, background: 'rgba(0,0,0,0.4)', padding: 3, borderRadius: 14, border: '1px solid rgba(0,255,213,0.2)' }}>
           <button onClick={() => setActiveView(1)} style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 1 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 1 ? '#ed121d' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 1 ? '0 4px 10px  #7dece8' : 'none', textTransform: 'uppercase' }}>
             ⭐ Starline
           </button>
