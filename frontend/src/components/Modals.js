@@ -293,8 +293,32 @@ export function WithdrawModal({ wallet, onClose, onSuccess }) {
         body: JSON.stringify(body)
       });
       const d = await res.json();
-      if (d.success) setStep(2);
-      else alert(d.message || 'Error');
+      if (d.success) {
+        setStep(2);
+        // WhatsApp notify
+        const sendWithdrawWhatsApp = async () => {
+          try {
+            const settRes = await fetch(`${API}/api/admin/settings`);
+            const settData = await settRes.json();
+            const phone = settData?.settings?.phone || settData?.settings?.whatsapp || '9999999999';
+            const num = phone.replace(/\D/g, '');
+            const wa = num.startsWith('91') ? num : `91${num}`;
+            const details = method === 'upi'
+              ? `UPI ID: ${upiId}\nName: ${upiName}`
+              : `Bank: ${bankName}\nA/C: ${accNo}\nIFSC: ${ifsc}\nName: ${accName}`;
+            const text = encodeURIComponent(
+              `💸 *Withdrawal Request — MatkaKing*\n\n` +
+              `Amount: ₹${Number(amt).toLocaleString('en-IN')}\n` +
+              `Method: ${method === 'upi' ? 'UPI' : 'Bank Transfer'}\n` +
+              `${details}\n` +
+              `Date & Time: ${new Date().toLocaleString('en-IN')}\n\n` +
+              `Please process quickly 🙏`
+            );
+            window.open(`https://wa.me/${wa}?text=${text}`, '_blank');
+          } catch {}
+        };
+        sendWithdrawWhatsApp();
+      } else alert(d.message || 'Error');
     } catch {
       setStep(2);
     }
