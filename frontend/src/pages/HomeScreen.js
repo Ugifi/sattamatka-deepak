@@ -496,7 +496,9 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
   // ── MAIN HOME ──────────────────────────────────────────────────
   return (
     <div className="screen"
-      
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       style={{ paddingBottom: 80, backgroundColor: '#021a14', minHeight: '100vh', color: '#fff', fontFamily: "'Poppins', sans-serif" }}
     >
       {isAdminImpersonating && (
@@ -537,20 +539,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
       <div style={{ padding: '-12px -12px 0 -12px' }}>
 
         {/*  SLIDER */}
-        <div 
-  style={{ overflow: 'hidden', borderRadius: '14px 14px 0 0', height: 200, position: 'relative', margin: '0 -12px', marginBottom: '-20px' }}
-  onTouchStart={e => { e.stopPropagation(); touchStartX.current = e.touches[0].clientX; touchEndX.current = 0; }}
-  onTouchMove={e => { e.stopPropagation(); touchEndX.current = e.touches[0].clientX; }}
-  onTouchEnd={e => {
-    e.stopPropagation();
-    if (!touchStartX.current || !touchEndX.current) return;
-    const distance = touchStartX.current - touchEndX.current;
-    if (distance > 40) setCurrentSlide(prev => (prev + 1) % slides.length);
-    else if (distance < -40) setCurrentSlide(prev => (prev - 1 + slides.length) % slides.length);
-    touchStartX.current = 0;
-    touchEndX.current = 0;
-  }}
->
+        <div style={{ overflow: 'hidden', borderRadius: '14px 14px 0 0', height: 200, position: 'relative', margin: '0 -12px', marginBottom: '-20px' }}>
           {slides.map((b, i) => (
             <div key={i} style={{ 
   position: 'absolute', 
