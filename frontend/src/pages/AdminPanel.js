@@ -6,10 +6,12 @@ import React, { useState, useEffect, useRef } from 'react';
 
 const API = 'https://sattamatka-deepak-hy1n.onrender.com';
 
+
 function toIST(dateStr) {
   if (!dateStr) return '';
   try {
     let str = String(dateStr);
+    // Sab UTC mein stored hai — 'Z' lagao
     if (!str.includes('T') && str.includes(' ')) {
       str = str.replace(' ', 'T') + 'Z';
     } else if (str.includes('T') && !str.includes('+') && !str.endsWith('Z')) {
@@ -42,6 +44,7 @@ function toISTlocal(dateStr) {
     });
   } catch (e) { return ''; }
 }
+// NAYA — timeout + retry wala
 
 async function apiCall(path, method = 'GET', body = null, retries = 2) {
   const token = localStorage.getItem('mk_token');
@@ -567,7 +570,7 @@ export default function AdminPanel({ onLogout }) {
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [editingGame, setEditingGame] = useState(null);
-
+const [gameTab, setGameTab] = useState('main');
   const [changeMobileUser, setChangeMobileUser] = useState(null);
 
   const [adminReady, setAdminReady] = useState(false);
@@ -587,6 +590,18 @@ export default function AdminPanel({ onLogout }) {
       onLogout();
     }
   }, []);
+
+  // ── 10 MIN AUTO LOGOUT ─────────────────────────────────────
+  useEffect(() => {
+    if (!adminReady) return;
+    const timer = setTimeout(() => {
+      localStorage.removeItem('mk_token');
+      localStorage.removeItem('mk_admin_user');
+      localStorage.removeItem('mk_admin_logged');
+      onLogout();
+    }, 10 * 60 * 1000); // 10 minutes
+    return () => clearTimeout(timer);
+  }, [adminReady]);
 
   const [settings, setSettings] = useState({
     site_name: '', site_url: '', upi_id: '', upi_name: '', whatsapp: '', phone: '',
@@ -989,9 +1004,17 @@ export default function AdminPanel({ onLogout }) {
 
           <div style={B.card}>
             <div style={B.title}>🎮 All Games</div>
-            {games.length === 0
+            {/* Category Tabs */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              {[['main','🎯 Main'],['disawar','🌙 Disawar'],['starline','⭐ Starline']].map(([val, label]) => (
+                <button key={val} onClick={() => setGameTab(val)} style={{ flex: 1, padding: '9px 0', borderRadius: 10, cursor: 'pointer', fontWeight: 800, fontSize: 11, background: gameTab === val ? 'linear-gradient(90deg,#14f4ce,#e0800b)' : C.inputBg, color: gameTab === val ? '#001a17' : C.textMuted, border: gameTab === val ? 'none' : `1px solid ${C.cardBorder}` }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {games.filter(g => (g.game_category || 'main') === gameTab).length === 0
               ? <div style={{ color: C.textMuted, textAlign: 'center', padding: 20, fontWeight: 700 }}>No games found.</div>
-              : games.map(g => (
+              : games.filter(g => (g.game_category || 'main') === gameTab).map(g => (
                 <div key={g.id} style={{ background: 'rgba(0,255,213,0.04)', border: '1px solid rgba(0,255,213,0.1)', borderRadius: 12, padding: 14, marginBottom: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <div>
@@ -1025,8 +1048,12 @@ export default function AdminPanel({ onLogout }) {
             {deposits.length === 0
               ? <div style={{ textAlign: 'center', color: C.textMuted, padding: 40, fontWeight: 700 }}>Koi deposit request nahi hai</div>
               : deposits.map(d => (
-                <DepositCard key={d.id} d={d} onApprove={updateDeposit} onReject={updateDeposit} />
-              ))
+              deposits.map(d => (
+  <DepositCard key={d.id} d={d}
+    onApprove={(id) => updateDeposit(id, 'approve')}
+    onReject={(id) => updateDeposit(id, 'reject')}
+  />
+))              ))
             }
           </div>
         )}
@@ -1037,8 +1064,11 @@ export default function AdminPanel({ onLogout }) {
             {withdrawals.length === 0
               ? <div style={{ textAlign: 'center', color: C.textMuted, padding: 40, fontWeight: 700 }}>Koi withdrawal request nahi hai</div>
               : withdrawals.map(w => (
-                <WithdrawCard key={w.id} w={w} onApprove={updateWithdrawal} onReject={updateWithdrawal} />
-              ))
+                <WithdrawCard key={w.id} w={w}
+    onApprove={(id) => updateWithdrawal(id, 'approve')}
+    onReject={(id) => updateWithdrawal(id, 'reject')}
+  />
+))
             }
           </div>
         )}
