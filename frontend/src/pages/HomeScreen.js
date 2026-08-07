@@ -411,17 +411,25 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
   }
 
   // ── RENDER GAMES LIST ──────────────────────────────────────────
-  const renderGamesList = (gamesList, isDisawarStyle = false) => {
+  const renderGamesList = (gamesList, isDisawarStyle = false, hideOpenTime = false) => {
     if (loading) return <div style={{ textAlign: 'center', color: '#00ffd5', padding: 40, fontWeight: 700 }}>⏳ Loading Games...</div>;
     if (gamesList.length === 0) return <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', padding: 40 }}>Koi game available nahi hai.</div>;
 
     return gamesList.map(g => {
       const status = isDisawarStyle ? getDisawarStatus(g) : getGameStatus(g);
+      const formatStarlineResult = (g) => {
+  const openRes = g.open_result;
+  if (!openRes) return '***-*';
+  const digits = String(openRes).replace(/[^0-9]/g, '');
+  if (digits.length < 3) return '***-*';
+  const sum = digits.split('').reduce((s, d) => s + parseInt(d), 0) % 10;
+  return `${digits}-${sum}`;
+};
       return (
         <div key={g.id} className="game-wrapper">
           <div className="game-card-content">
 
-            {isDisawarStyle ? (
+            {(isDisawarStyle || hideOpenTime) ? (
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <div style={{ fontSize: 11, color: '#00ffd5', fontWeight: 800, background: 'rgba(0,255,213,0.1)', padding: '3px 12px', borderRadius: 4, border: '1px solid rgba(0,255,213,0.3)' }}>
                   🕐 Close: {formatTime(g.close_time)}
@@ -468,9 +476,9 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
                 </div>
               </div>
             ) : (
-              <div className="result-number" style={{ textAlign: 'center', fontSize: 24, fontWeight: 900, color: '#00ffd5', margin: '4px 0 8px 0', letterSpacing: '3px', fontFamily: "'Orbitron', sans-serif" }}>
-                {formatResult(g)}
-              </div>
+             <div className="result-number" style={{ textAlign: 'center', fontSize: 24, fontWeight: 900, color: '#00ffd5', margin: '4px 0 8px 0', letterSpacing: '3px', fontFamily: "'Orbitron', sans-serif" }}>
+  {hideOpenTime ? formatStarlineResult(g) : formatResult(g)}
+</div>
             )}
 
             <div style={{ fontSize: 10, color: status.canPlay ? '#00cc44' : '#ff2244', fontWeight: 800, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, letterSpacing: 2 }}>
@@ -570,7 +578,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
         </div>
 
         {/* SLIDER TAB BUTTONS */}
-        <div style={{ display: 'flex', gap: 6, margin: 6, background: 'rgba(0,0,0,0.4)', padding: 3, borderRadius: 14, border: '1px solid rgba(0,255,213,0.2)' }}>
+        <div style={{ display: 'flex', gap: 10, margin: 3, marginbottom: '10px', background: 'rgba(0,0,0,0.4)', padding: 5, borderRadius: 14, border: '1px solid rgba(0,255,213,0.2)' }}>
           <button onClick={() => setActiveView(1)} style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: 10, fontWeight: 900, fontSize: 12, cursor: 'pointer', letterSpacing: 1, transition: 'all 0.3s ease', background: activeView === 1 ? 'linear-gradient(145deg, #021a14, #063d35)' : 'transparent', color: activeView === 1 ? '#ed121d' : 'rgba(255,255,255,0.5)', boxShadow: activeView === 1 ? '0 4px 10px  #7dece8' : 'none', textTransform: 'uppercase' }}>
             ⭐ Starline
           </button>
@@ -588,7 +596,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
         {/* GAMES */}
         <div style={{ transition: 'all 0.3s ease' }}>
           {activeView === 0 && renderGamesList(games)}
-          {activeView === 1 && renderGamesList(starlineGames)}
+          {activeView === 1 && renderGamesList(starlineGames, false, true)}
           {activeView === 2 && renderGamesList(disawarGames, true)}
         </div>
       </div>
