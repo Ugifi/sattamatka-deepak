@@ -257,7 +257,7 @@ async function syncResults() {
   const games = await scrapeAllGames();
   if (!games.length) return { success: false, message: 'Kuch scrape nahi hua' };
 
-  const todayDate  = getISTDate(); // 2 AM wali date function
+  const todayDate  = getISTDate();
   const nowMinutes = getCurrentISTMinutes();
 
   const [dbGames] = await db.query(
@@ -282,26 +282,20 @@ async function syncResults() {
     let updateOpen = false;
     let updateClose = false;
 
-    // ── TUMHARA STRICT RULE YAHAN HAI ──────────────────────────────────────
     if (item.is_complete) {
-      // Site par dono (Open+Close) sath aaye hain (e.g., 469-99-667)
       if (!closeTimePassed) {
-        // Agar close time nahi hua, toh ye purana data hai. SKIP KARO!
         skipped++;
         continue;
       }
-      // Agar close time ho gaya hai, toh dono update karo (agar DB se alag hai)
       if (dbGame.close_result !== item.close_result) {
         updateClose = true;
         updateOpen = true; 
       }
     } else {
-      // Site par sirf Open aaya hai (e.g., 469-9)
       if (openTimePassed && dbGame.open_result !== item.open_result) {
         updateOpen = true;
       }
     }
-    // ──────────────────────────────────────────────────────────────────────────
 
     if (!updateOpen && !updateClose) {
       const [pendingBids] = await db.query(
@@ -323,7 +317,7 @@ async function syncResults() {
           result_date = ?, 
           result_declared_at = CONVERT_TZ(NOW(), '+00:00', '+05:30') 
          WHERE id = ?`,
-        [item.open_result, item.jodi_result, todayDate, dbGame.id] // 2 AM wali date save hogi
+        [item.open_result, item.jodi_result, todayDate, dbGame.id]
       );
     }
     
@@ -344,7 +338,6 @@ async function syncResults() {
     
     await settleGameBids(dbGame.id, finalOpenRes, finalCloseRes);
 
-    // ── CHART DATA SAVE LOGIC ──────────────────────────────────────────
     if (finalOpenRes && finalCloseRes) {
       try {
         const openDigit = String(finalOpenRes).split('').reduce((s, d) => s + parseInt(d), 0) % 10;
@@ -366,7 +359,6 @@ async function syncResults() {
         console.error(`❌ Chart save error for ${dbGame.name}:`, chartErr.message);
       }
     }
-    // ────────────────────────────────────────────────────────────────────
 
     updated++;
     log.push({ game: dbGame.name, result: item.result });
@@ -384,11 +376,34 @@ async function syncResults() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  DISAWAR SCRAPER — lucky-satta.com se results (NAYA CODE — PURANA TOUCH NAHI)
+//  DISAWAR SCRAPER — satta-king-fast.com se results (UPDATED — lucky-satta.com HATAYA)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ── Site naam → DB naam mapping (confirmed from /test-disawar-raw output) ─────
+// Site par c0 format: "GAME NAME at HH:MM AM/PM Record Chart"
+// Hamare DB mein category='disawar' games:
+//   SADAR BAZAR(68), GWALIOR(69), DELHI BAZAR(70), MOHALI(71),
+//   SHRI GANESH(72), AGRA(73), FARIDABAD(74), RAJKOT(75),
+//   GAZIYABAD(76), DWARIKA(77), GALI(78), DESAWAR(79)
+
+const SITE_TO_DB_MAP = {
+  // Site exact name    : DB exact name
+  'DESAWAR'            : 'DESAWAR',        // ✅ exact match
+  'GALI'               : 'GALI',           // ✅ exact match
+  'FARIDABAD'          : 'FARIDABAD',      // ✅ exact match
+  'GHAZIABAD'          : 'GAZIYABAD',      // site=GHAZIABAD, DB=GAZIYABAD
+  'DELHI BAZAR'        : 'DELHI BAZAR',    // ✅ exact match
+  'MOHALI'             : 'MOHALI',         // ✅ exact match
+  'SHRI GANESH'        : 'SHRI GANESH',    // ✅ exact match
+  'GWALIOR BAZAR'      : 'GWALIOR',        // site=GWALIOR BAZAR, DB=GWALIOR
+  'AGRA BAZAR'         : 'AGRA',           // site=AGRA BAZAR, DB=AGRA
+  // SADAR BAZAR → site par nahi hai
+  // RAJKOT       → site par nahi hai
+  // DWARIKA      → site par nahi hai (DWARIKA/DWARKA koi nahi)
+};
+
 async function scrapeDisawarResults() {
-  const url = 'https://lucky-satta.com/chart-2026/delhi-bazar-satta-result';
+  const url = 'https://satta-king-fast.com/delhi-bazar/satta-result-chart/db/';
 
   let html;
   try {
@@ -398,6 +413,7 @@ async function scrapeDisawarResults() {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
         'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache',
       },
       timeout: 20000
     });
@@ -406,7 +422,10 @@ async function scrapeDisawarResults() {
     console.log('⚠️ [DISAWAR] Scrape Error (Attempt 1):', err1.message, '| Retrying...');
     await new Promise(r => setTimeout(r, 3000));
     try {
-      const res = await axios.get(url, { timeout: 20000 });
+      const res = await axios.get(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        timeout: 20000
+      });
       html = res.data;
     } catch (err2) {
       console.log('❌ [DISAWAR] Scrape failed (Attempt 2):', err2.message);
@@ -416,115 +435,121 @@ async function scrapeDisawarResults() {
 
   const $ = cheerio.load(html);
   const results = [];
+  const seen = new Set(); // duplicate game names skip karne ke liye
 
-  // Table rows parse karo
+  // ── Real HTML structure (confirmed from test-disawar-raw) ─────────────────
+  // c0 = "DESAWAR at 05:00 AM Record Chart"  ← game name + time + link sab ek saath
+  // c1 = "51"  ← kal ka result
+  // c2 = "83"  ← aaj ka result (ya "XX" / "--" agar abhi nahi aaya)
+  //
+  // Game name nikalne ka tarika:
+  //   "DESAWAR at 05:00 AM Record Chart" → " at " se pehle wala part = "DESAWAR"
+
   $('table tr').each((i, row) => {
     const cells = $(row).find('td');
-    if (cells.length < 2) return;
+    if (cells.length < 3) return; // 3 cells chahiye: name, kal, aaj
 
-    const nameCell   = $(cells[0]).text().trim();
-    const resultCell = $(cells[cells.length - 1]).text().trim();
+    // ── Game name: " at " se pehle wala text ──────────────────────────────
+    const rawText = $(cells[0]).text().trim().replace(/\s+/g, ' ');
+    const atIndex = rawText.indexOf(' at ');
+    if (atIndex === -1) return; // "at" nahi hai toh ye game row nahi hai
 
-    // Game name — time hata do (newline se split)
-    const nameParts = nameCell.split('\n');
-    let gameName = nameParts[0].trim().toUpperCase().replace(/\s+/g, ' ');
+    const gameName = rawText.substring(0, atIndex).trim().toUpperCase();
     if (!gameName || gameName.length < 2) return;
 
-    // "WAIT" ya empty skip karo
-    if (!resultCell || resultCell.toLowerCase().includes('wait') || resultCell.includes('✗')) return;
+    // ── Sirf hamare DISAWAR_GAME_MAP wale games ──────────────────────────
+    if (!SITE_TO_DB_MAP[gameName]) return;
 
-    const resultClean = resultCell.replace(/[^0-9]/g, '').trim();
-    if (!resultClean) return;
+    // ── Duplicate skip ────────────────────────────────────────────────────
+    if (seen.has(gameName)) return;
+    seen.add(gameName);
 
-    // 2 digit jodi
-    if (/^\d{2}$/.test(resultClean)) {
-      results.push({ gameName, jodi: resultClean });
-    } else if (/^\d{1}$/.test(resultClean)) {
-      results.push({ gameName, jodi: resultClean.padStart(2, '0') });
-    }
+    // ── Aaj ka result: cells[2] (last column) ─────────────────────────────
+    const todayRaw = $(cells[2]).text().trim().replace(/\s+/g, '');
+
+    // XX ya -- = result abhi nahi aaya
+    if (!todayRaw || /^x+$/i.test(todayRaw) || todayRaw === '--') return;
+
+    // Exactly 2 digits hone chahiye
+    const digits = todayRaw.replace(/[^0-9]/g, '');
+    if (!/^\d{2}$/.test(digits)) return;
+
+    results.push({ siteName: gameName, jodi: digits });
   });
 
-  console.log(`📊 [DISAWAR] Scraped ${results.length} results from lucky-satta.com`);
+  console.log(`📊 [DISAWAR] Scraped ${results.length} results from satta-king-fast.com`);
+  if (results.length) {
+    results.forEach(r => console.log(`   → ${r.siteName} | Jodi: ${r.jodi}`));
+  } else {
+    console.log('⚠️ [DISAWAR] 0 results — sabka result XX hai ya time nahi hua abhi');
+  }
   return results;
-}
-
-function isDisawarMatch(dbName, scrapedName) {
-  const normalize = (s) => s.toLowerCase().trim()
-    .replace(/\s+/g, ' ')
-    .replace(/gajiyabad|gaziabad/g, 'gaziyabad')
-    .replace(/shree|shri/g, 'shri')
-    .replace(/genesh|ganesh/g, 'ganesh');
-
-  const a = normalize(dbName);
-  const b = normalize(scrapedName);
-
-  if (a === b) return true;
-  if (a.includes(b) || b.includes(a)) return true;
-  return false;
 }
 
 async function syncDisawarResults() {
   const scraped = await scrapeDisawarResults();
   if (!scraped.length) {
-    return { success: false, message: '[DISAWAR] Kuch scrape nahi hua' };
+    return { success: false, message: '[DISAWAR] Kuch scrape nahi hua — site se data nahi aaya' };
   }
 
   const todayDate  = getISTDate();
   const nowMinutes = getCurrentISTMinutes();
 
-  const disawarKeywords = ['desawar', 'gali', 'faridabad', 'gajiyabad', 'gaziyabad',
-                           'dwarka', 'alwar', 'sadar', 'gwalior', 'delhi bazar',
-                           'delhi matka', 'shri ganesh', 'shree ganesh', 'agra'];
-
+  // Sirf disawar category ke games fetch karo
   const [dbGames] = await db.query(
     `SELECT id, name, close_time, open_result, close_result, result_date
-     FROM games WHERE status != 'deleted'`
+     FROM games WHERE game_category = 'disawar' AND status != 'deleted'`
   );
-
-  const disawarDbGames = dbGames.filter(g => {
-    const n = g.name.toLowerCase();
-    return disawarKeywords.some(k => n.includes(k));
-  });
 
   let updated = 0, skipped = 0;
   const log = [];
 
   for (const item of scraped) {
-    const dbGame = disawarDbGames.find(g => isDisawarMatch(g.name, item.gameName));
-    if (!dbGame) {
-      console.log(`⚠️ [DISAWAR] DB mein nahi mila: "${item.gameName}"`);
+    // Site name → DB name
+    const dbName = SITE_TO_DB_MAP[item.siteName];
+    if (!dbName) {
+      console.log(`⚠️ [DISAWAR] Map mein nahi hai: "${item.siteName}"`);
       continue;
     }
 
-    // Close time nahi hua toh skip
+    // DB mein dhundo
+    const dbGame = dbGames.find(g => g.name.trim().toUpperCase() === dbName);
+    if (!dbGame) {
+      console.log(`⚠️ [DISAWAR] DB mein game nahi mila: "${dbName}"`);
+      continue;
+    }
+
+    // Close time nahi hua toh skip — purana result na aajaaye
     const closeMin = timeToMinutes(dbGame.close_time);
     if (closeMin && nowMinutes < closeMin) {
+      console.log(`⏳ [DISAWAR] ${dbGame.name} — close time abhi nahi hua (${dbGame.close_time}), skip`);
       skipped++;
       continue;
     }
 
-    // Same result already hai toh skip
+    // Same result already save hai toh skip
     if (dbGame.close_result === item.jodi) {
       skipped++;
       continue;
     }
 
-    const openDigit  = item.jodi[0];
-    const closeDigit = item.jodi[1];
+    // Jodi se open/close digit nikalo (e.g. "83" → open=8, close=3)
+    const openDigit  = item.jodi[0];   // e.g. "8"
+    const closeDigit = item.jodi[1];   // e.g. "3"
 
     try {
       await db.query(
         `UPDATE games SET 
-          open_result  = ?,
-          close_result = ?,
-          jodi_result  = ?,
-          result_date  = ?,
+          open_result        = ?,
+          close_result       = ?,
+          jodi_result        = ?,
+          result_date        = ?,
           result_declared_at = CONVERT_TZ(NOW(), '+00:00', '+05:30')
          WHERE id = ?`,
         [openDigit, closeDigit, item.jodi, todayDate, dbGame.id]
       );
 
-      // Chart table mein save — reset pe delete nahi hoga
+      // Chart table mein save (reset pe delete nahi hoga)
       await db.query(
         `INSERT INTO game_results 
           (game_id, result_date, open_result, close_result, jodi_result, open_digit, close_digit, result_source)
@@ -543,7 +568,7 @@ async function syncDisawarResults() {
 
       updated++;
       log.push({ game: dbGame.name, jodi: item.jodi });
-      console.log(`✅ [DISAWAR] ${dbGame.name} | Jodi: ${item.jodi}`);
+      console.log(`✅ [DISAWAR] ${dbGame.name} | Jodi: ${item.jodi} (${openDigit}-${closeDigit})`);
 
     } catch (err) {
       console.error(`❌ [DISAWAR] ${dbGame.name} update failed:`, err.message);
@@ -580,13 +605,11 @@ router.get('/sync-disawar', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  STARLINE SCRAPER — dpbossonline.com se results
+//  STARLINE SCRAPER — dpbossonline.com se results (BILKUL SAME — TOUCH NAHI KIYA)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Milan Starline URL → column headers se time match karenge
 const STARLINE_URL = 'https://dpbossonline.com/starline-panel/2/milan-starline';
 
-// DB game name → site column time mapping
 const STARLINE_TIME_MAP = {
   '09:30': '9:30 AM',
   '10:30': '10:30 AM',
@@ -628,7 +651,6 @@ async function scrapeStarlineResults() {
   const $ = cheerio.load(html);
   const results = {};
 
-  // Column index → DB game name mapping
   const colIndexMap = {};
   $('table thead tr th').each((i, el) => {
     const text = $(el).text().trim();
@@ -642,7 +664,6 @@ async function scrapeStarlineResults() {
 
   console.log('📋 [STARLINE] Column map:', colIndexMap);
 
-  // Last row dhundo (aaj ka)
   const rows = $('table tbody tr').toArray();
   if (!rows.length) {
     console.log('⚠️ [STARLINE] Koi row nahi mili');
@@ -653,7 +674,7 @@ async function scrapeStarlineResults() {
   const cells = $(lastRow).find('td');
 
   cells.each((i, cell) => {
-    const dbTime = colIndexMap[i]; // col 0 = Date, col 1 = 9:30 AM etc
+    const dbTime = colIndexMap[i];
     if (!dbTime) return;
 
     const pana  = $(cell).find('div').text().trim();
@@ -667,6 +688,7 @@ async function scrapeStarlineResults() {
   console.log(`📊 [STARLINE] Scraped ${Object.keys(results).length} results`);
   return results;
 }
+
 async function syncStarlineResults() {
   const scraped = await scrapeStarlineResults();
   if (!Object.keys(scraped).length) {
@@ -685,7 +707,7 @@ async function syncStarlineResults() {
   const log = [];
 
   for (const dbGame of dbGames) {
-    const gameName = dbGame.name.trim(); // e.g. '09:30'
+    const gameName = dbGame.name.trim();
     const scraped_result = scraped[gameName];
 
     if (!scraped_result) {
@@ -693,14 +715,12 @@ async function syncStarlineResults() {
       continue;
     }
 
-    // Close time check
     const closeMin = timeToMinutes(dbGame.close_time);
     if (closeMin && nowMinutes < closeMin) {
       skipped++;
       continue;
     }
 
-    // Already same result hai toh skip
     if (dbGame.open_result === scraped_result.pana) {
       skipped++;
       continue;
@@ -718,7 +738,6 @@ async function syncStarlineResults() {
         [pana, todayDate, dbGame.id]
       );
 
-      // Chart table mein save
       await db.query(
         `INSERT INTO game_results 
           (game_id, result_date, open_result, jodi_result, open_digit, result_source)
@@ -730,7 +749,6 @@ async function syncStarlineResults() {
         [dbGame.id, todayDate, pana, digit, digit]
       );
 
-      // Pending bids settle karo
       await settleGameBids(dbGame.id, pana, null);
 
       updated++;
@@ -770,6 +788,7 @@ router.get('/sync-starline', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
 // ═══════════════════════════════════════════════════════════════════════════════
 
 module.exports = router;
