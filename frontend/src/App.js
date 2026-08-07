@@ -76,95 +76,6 @@ const IconSupport = ({ size = 24, color = 'currentColor' }) => (
   </svg>
 );
 
-// ── LANGUAGE SELECTION SCREEN ─────────────────────────────────────────────────
-function LanguageScreen({ onSelect }) {
-  const languages = [
-    { label: 'English', val: 'en' },
-    { label: 'हिन्दी', val: 'hi' },
-    { label: 'తెలుగు', val: 'te' },
-    { label: 'ಕನ್ನಡ', val: 'kn' },
-  ];
-
-  return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #021a14 0%, #063d35 60%, #0a4a3e 100%)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 24,
-      fontFamily: '"Segoe UI", sans-serif',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
-      {/* Background circles */}
-      <div style={{ position:'absolute', top:'-5%', left:'-10%', width:300, height:300, borderRadius:'50%', background:'rgba(0,255,213,0.04)', filter:'blur(60px)' }}/>
-      <div style={{ position:'absolute', bottom:'-10%', right:'-10%', width:350, height:350, borderRadius:'50%', background:'rgba(255,215,0,0.06)', filter:'blur(70px)' }}/>
-
-      {/* Logo */}
-      <div style={{ width:100, height:100, borderRadius:'50%', background:'rgba(0,255,213,0.1)', border:'2px solid rgba(0,255,213,0.3)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16, boxShadow:'0 0 30px rgba(0,255,213,0.15)', overflow:'hidden' }}>
-        <img src={`${process.env.PUBLIC_URL}/th.jpg`} alt="Logo" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-      </div>
-
-      <div style={{ color:'#fff', fontSize:26, fontWeight:900, letterSpacing:2, marginBottom:4, textShadow:'0 2px 10px rgba(0,255,213,0.2)' }}>MATKA BOSS</div>
-      <div style={{ color:'#FFD700', fontSize:12, fontWeight:700, letterSpacing:1, marginBottom:40 }}>India's #1 Premium Matka Platform</div>
-
-      {/* Select Language Title */}
-      <div style={{ color:'#fff', fontSize:22, fontWeight:800, marginBottom:6 }}>Select your</div>
-      <div style={{ color:'#FFD700', fontSize:28, fontWeight:900, marginBottom:32, letterSpacing:1 }}>Language</div>
-
-      {/* Language Buttons Grid */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, width:'100%', maxWidth:320 }}>
-        {languages.map(l => (
-          <button key={l.val} onClick={() => onSelect(l.val)}
-            style={{
-              padding: '20px 0',
-              borderRadius: 16,
-              border: '2px solid rgba(0,255,213,0.25)',
-              background: 'rgba(0,255,213,0.08)',
-              color: '#00ffd5',
-              fontSize: 18,
-              fontWeight: 800,
-              cursor: 'pointer',
-              backdropFilter: 'blur(10px)',
-              transition: 'all 0.2s',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-              letterSpacing: 0.5
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background='rgba(0,255,213,0.18)'; e.currentTarget.style.transform='scale(1.04)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background='rgba(0,255,213,0.08)'; e.currentTarget.style.transform='scale(1)'; }}>
-            {l.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Marathi button - centered below */}
-      <button onClick={() => onSelect('mr')}
-        style={{
-          marginTop: 14,
-          padding: '20px 80px',
-          borderRadius: 16,
-          border: '2px solid rgba(0,255,213,0.25)',
-          background: 'rgba(0,255,213,0.08)',
-          color: '#00ffd5',
-          fontSize: 18,
-          fontWeight: 800,
-          cursor: 'pointer',
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-          letterSpacing: 0.5,
-          transition: 'all 0.2s'
-        }}
-        onMouseEnter={e => { e.currentTarget.style.background='rgba(0,255,213,0.18)'; e.currentTarget.style.transform='scale(1.04)'; }}
-        onMouseLeave={e => { e.currentTarget.style.background='rgba(0,255,213,0.08)'; e.currentTarget.style.transform='scale(1)'; }}>
-        मराठी
-      </button>
-
-      <div style={{ color:'rgba(255,255,255,0.3)', fontSize:11, marginTop:40, fontWeight:600 }}>18+ Only · Play Responsibly</div>
-    </div>
-  );
-}
 
 // ── DARK DRAWER ───────────────────────────────────────────────────────────────
 function BlueDrawer({ user, onClose, onNav, onLogout, wallet }) {
@@ -488,15 +399,12 @@ function CategoryGamesScreen({ category, apiCategory, onPlay }) {
 export default function App() {
   const isAdmin = window.location.pathname === '/admin' || window.location.search.includes('admin=1');
 
-  const [language, setLanguage] = useState(() => localStorage.getItem('mk_language') || null);
-
-  const handleLanguageSelect = (lang) => {
-    localStorage.setItem('mk_language', lang);
-    setLanguage(lang);
-  };
+  const [language, setLanguage] = useState('en');
+  
 
   const [user, setUser]                   = useState(null);
-  const [authLoading, setAuthLoading]     = useState(true);
+const [authLoading, setAuthLoading] = useState(true);
+const [videoEnded, setVideoEnded]   = useState(false);
   const [tab, setTab]                     = useState('home');
   const [wallet, setWallet]               = useState(0);
   const [bids, setBids]                   = useState(INIT_BIDS);
@@ -708,15 +616,31 @@ setPage(backPage); setSelectedGame(null); setSelectedType(null);
     return <AdminPanel onLogout={() => setAdminLoggedIn(false)} />;
   }
 
-  if (!language) return <LanguageScreen onSelect={handleLanguageSelect} />;
 
-  if (authLoading) {
-    return (
-      <div style={{ height:'100vh', display:'flex', justifyContent:'center', alignItems:'center', background:'#021a14', color:'#00ffd5', fontSize:18, fontWeight:700 }}>
-        Loading...
-      </div>
-    );
-  }
+if (!videoEnded) {
+  return (
+    <div style={{ position:'fixed', inset:0, background:'#021a14', overflow:'hidden' }}>
+      <video
+        src="/vi.mp4"
+        autoPlay
+        muted
+        playsInline
+        onEnded={() => setVideoEnded(true)}
+        ref={el => {
+          if (el) {
+            el.muted = false;
+            el.play().catch(() => { el.muted = true; el.play(); });
+          }
+        }}
+        style={{
+          position:'absolute', top:'50%', left:'50%',
+          transform:'translate(-50%,-50%)',
+          height:'100%', width:'auto', maxWidth:'none'
+        }}
+      />
+    </div>
+  );
+}
 
   if (!user) return <AuthScreen onLogin={handleLogin} />;
 
@@ -752,7 +676,7 @@ setPage(backPage); setSelectedGame(null); setSelectedType(null);
       <div className="topnav">
         <div className="tn-left">
           {isSubPage
-            ? <div className="back-btn" onClick={goBack} style={{ color:'#fff', fontSize:26, cursor:'pointer', padding:'4px 8px 4px 0' }}>‹</div>
+            ? <div className="back-btn" onClick={goBack} style={{ color:'#ffffff', fontSize:26, cursor:'pointer', padding:'4px 8px 4px 0' }}>‹</div>
             : <div className="hamburger" onClick={() => setDrawer(true)}><span/><span/><span/></div>
           }
           <span className="brand">{isSubPage ? (navTitle || 'BACK') : siteName}</span>
