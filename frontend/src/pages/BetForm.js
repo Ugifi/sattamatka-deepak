@@ -55,16 +55,16 @@ const SP_PANAS_FINAL = {
   9: ['190','235','280','370','389','460','479','569','578','009','900','990'],
 };
 const DP_PANAS = {
-  0: ['118','226','334','442','550','668','776','884','992','000'],
-  1: ['119','227','335','443','551','669','777','885','993','100'],
-  2: ['110','228','336','444','552','660','778','886','994','200'],
-  3: ['111','229','337','445','553','661','779','887','995','300'],
-  4: ['112','220','338','446','554','662','770','888','996','400'],
-  5: ['113','221','339','447','555','663','771','889','997','500'],
-  6: ['114','222','330','448','556','664','772','880','998','600'],
-  7: ['115','223','331','449','557','665','773','881','999','700'],
-  8: ['116','224','332','440','558','666','774','882','990','800'],
-  9: ['117','225','333','441','559','667','775','883','991','900'],
+  0: ['118','226','334','442','550','668','776','884','992',],
+  1: ['119','227','335','443','551','669','885','993','100'],
+  2: ['110','228','336','552','660','778','886','994','200'],
+  3: ['229','337','445','553','661','779','887','995','300'],
+  4: ['112','220','338','446','554','662','770','996','400'],
+  5: ['113','221','339','447','663','771','889','997','500'],
+  6: ['114','330','448','556','664','772','880','998','600'],
+  7: ['115','223','331','449','557','665','773','881','700'],
+  8: ['116','224','332','440','558','774','882','990','800'],
+  9: ['117','225','441','559','667','775','883','991','900'],
 };
 
 const JODI_FAMILIES = {
@@ -742,7 +742,7 @@ const SessionToggle = () => {
         })()}
 
         {/* TWO DIGIT PANA */}
-        {id === 'two_digit_pana' && <><div className="bf-fg"><label className="bf-label">Pick Jodi (2-digit)</label><JodiGrid selected={num} onSelect={setNum} /></div><div className="bf-fg"><label className="bf-label">Pick Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num2} onSelect={setNum2} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
+        {id === 'two_digit_pana' && <><div className="bf-fg"><label className="bf-label">Pick Jodi (2-digit)</label><JodiGrid selected={num} onSelect={setNum} /></div><div className="bf-fg"><label className="bf-label">Pick Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num2} onSelect={setNum2} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/>{num && num2 && Number(amt) >= 10 && <div className="bf-infobox">🎯 Jodi: <strong>{num}</strong> &nbsp;|&nbsp; Pana: <strong>{num2}</strong> &nbsp;|&nbsp; ₹<strong>{amt}</strong></div>}<AddBtn label="+ Add to List"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
         
         {/* DIGIT JODI */}
         {id === 'digit_jodi' && <><div className="bf-fg"><label className="bf-label">Open or Close?</label><div className="bf-session-row" style={{marginBottom:10}}>{['open','close'].map(s => (<div key={s} className={`bf-session-btn${openClose === s ? ' active' : ''}`} style={{flex:1,textAlign:'center',padding:'10px 0',fontSize:13}} onClick={() => setOpenClose(s)}>{s.toUpperCase()}</div>))}</div></div><div className="bf-fg"><label className="bf-label">Pick a Digit</label><NumGrid selected={activeN !== null ? String(activeN) : ''} onSelect={v => setActiveN(Number(v))} /></div>{activeN !== null && <div className="bf-desc-box">Will add <strong>{digitJodis.length} jodis</strong>: {digitJodis.join(', ')}</div>}<AmtInput amt={amt} setAmt={setAmt} chips={chips} label="Amount per jodi"/><AddBtn label="+ Add Digit Jodis"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
