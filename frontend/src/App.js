@@ -125,9 +125,7 @@ function BlueDrawer({ user, onClose, onNav, onLogout, wallet }) {
 
         <div style={{ background:'linear-gradient(135deg, #021a14, #063d35)', padding:'20px 16px 16px', display:'flex', justifyContent:'space-between', alignItems:'flex-start', borderBottom:'1px solid rgba(0,255,213,0.1)' }}>
           <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-            <div style={{ width:50, height:50, borderRadius:'50%', background:'rgba(0,255,213,0.1)', border:'2px solid rgba(0,255,213,0.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0, color:'#00ffd5' }}>
-              {(user?.name || 'U').charAt(0).toUpperCase()}
-            </div>
+            <img src="/th.png" alt="avatar" style={{ width:50, height:50, borderRadius:'50%', border:'2px solid rgba(255,215,0,0.5)', flexShrink:0, objectFit:'cover' }} />
             <div>
               <div style={{ fontSize:16, fontWeight:800, color:'#fff', marginBottom:2 }}>{user?.name || 'Player'}</div>
               <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>{user?.mobile || ''}</div>
@@ -228,9 +226,7 @@ function ProfileScreen({ user, showToast }) {
   return (
     <div style={{ background:'#021a14', minHeight:'100vh', paddingBottom:80 }}>
       <div style={{ background:'linear-gradient(135deg, #021a14, #063d35)', padding:'24px 20px', textAlign:'center', borderBottom:'1px solid rgba(0,255,213,0.1)' }}>
-        <div style={{ width:72, height:72, background:'rgba(0,255,213,0.1)', border:'3px solid rgba(0,255,213,0.3)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 10px', fontSize:32, color:'#00ffd5' }}>
-          {(user?.name || 'U').charAt(0).toUpperCase()}
-        </div>
+        <img src="/th.png" alt="avatar" style={{ width:50, height:50, borderRadius:'40%', border:'2px solid rgba(255,215,0,0.5)', flexShrink:0, objectFit:'cover' }} />
         <div style={{ color:'#fff', fontWeight:800, fontSize:18 }}>{user?.name || 'User'}</div>
         <div style={{ color:'rgba(255,255,255,0.5)', fontSize:12, marginTop:2 }}>📱 {user?.mobile || '—'}</div>
       </div>
@@ -621,7 +617,7 @@ if (!videoEnded) {
   return (
     <div style={{ position:'fixed', inset:0, background:'#021a14', overflow:'hidden' }}>
       <video
-        src="/video.mp4"
+        src="/vi.mp4"
         autoPlay
         muted
         playsInline
