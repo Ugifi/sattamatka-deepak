@@ -50,7 +50,9 @@ const GAME_TYPES = {
   'dp_common':         { name: 'DP Common',          payout: 300,   min_digits: 3, max_digits: 3 },
   'single_pana_bulk':  { name: 'Single Pana Bulk',   payout: 150,   min_digits: 3, max_digits: 3 },
   'double_pana_bulk':  { name: 'Double Pana Bulk',   payout: 300,   min_digits: 3, max_digits: 3 },
-  'two_digit_pana':    { name: 'Two Digit Pana',     payout: 300,   min_digits: 3, max_digits: 3 }
+  'two_digit_pana':    { name: 'Two Digit Pana',     payout: 300,   min_digits: 3, max_digits: 3 },
+    'crossing_jodi':     { name: 'Crossing Jodi',      payout: 95,    min_digits: 2, max_digits: 2 }
+
 };
 
 // ─── GET ALL GAMES (with optional category filter & 2AM Reset Logic) ────────
