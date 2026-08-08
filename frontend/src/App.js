@@ -621,7 +621,7 @@ if (!videoEnded) {
   return (
     <div style={{ position:'fixed', inset:0, background:'#021a14', overflow:'hidden' }}>
       <video
-        src="/vi.mp4"
+        src="/video.mp4"
         autoPlay
         muted
         playsInline
