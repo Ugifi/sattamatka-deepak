@@ -82,18 +82,30 @@ function BlueDrawer({ user, onClose, onNav, onLogout, wallet }) {
   const [waNumber, setWaNumber] = React.useState('919999999999');
   const [tgId, setTgId]         = React.useState('matkaking_support');
 
-  React.useEffect(() => {
-    apiCall('/api/admin/settings').then(res => {
-      if (res?.success && res?.settings) {
-        const s = res.settings;
-        if (s.phone || s.whatsapp_support) {
-          const num = (s.phone || s.whatsapp_support).replace(/\D/g, '');
-          setWaNumber(num.startsWith('91') ? num : `91${num}`);
-        }
-        if (s.telegram) setTgId(s.telegram);
+ React.useEffect(() => {
+  apiCall('/api/payment-info').then(res => {
+    if (res?.success && res?.data) {
+      const d = res.data;
+      const wa = d.whatsapp_support || d.phone || '';
+      const tg = d.telegram || '';
+      if (wa) {
+        const num = wa.replace(/\D/g, '');
+        setWaNumber(num.startsWith('91') ? num : `91${num}`);
       }
-    }).catch(() => {});
-  }, []);
+      if (tg) { setTgId(tg); return; }
+    }
+    return apiCall('/api/admin/settings');
+  }).then(res => {
+    if (res?.success && res?.settings) {
+      const s = res.settings;
+      if (s.whatsapp_support || s.phone) {
+        const num = (s.whatsapp_support || s.phone).replace(/\D/g, '');
+        setWaNumber(num.startsWith('91') ? num : `91${num}`);
+      }
+      if (s.telegram) setTgId(s.telegram);
+    }
+  }).catch(() => {});
+}, []);
 
   const menuItems = [
     { section: 'ACCOUNT' },
@@ -181,18 +193,30 @@ function ProfileScreen({ user, showToast }) {
   const [waNumber, setWaNumber] = React.useState('919999999999');
   const [tgId, setTgId]         = React.useState('matkaking_support');
 
-  React.useEffect(() => {
-    apiCall('/api/admin/settings').then(res => {
-      if (res?.success && res?.settings) {
-        const s = res.settings;
-        if (s.phone || s.whatsapp_support) {
-          const num = (s.phone || s.whatsapp_support).replace(/\D/g, '');
-          setWaNumber(num.startsWith('91') ? num : `91${num}`);
-        }
-        if (s.telegram) setTgId(s.telegram);
+ React.useEffect(() => {
+  apiCall('/api/payment-info').then(res => {
+    if (res?.success && res?.data) {
+      const d = res.data;
+      const wa = d.whatsapp_support || d.phone || '';
+      const tg = d.telegram || '';
+      if (wa) {
+        const num = wa.replace(/\D/g, '');
+        setWaNumber(num.startsWith('91') ? num : `91${num}`);
       }
-    }).catch(() => {});
-  }, []);
+      if (tg) { setTgId(tg); return; }
+    }
+    return apiCall('/api/admin/settings');
+  }).then(res => {
+    if (res?.success && res?.settings) {
+      const s = res.settings;
+      if (s.whatsapp_support || s.phone) {
+        const num = (s.whatsapp_support || s.phone).replace(/\D/g, '');
+        setWaNumber(num.startsWith('91') ? num : `91${num}`);
+      }
+      if (s.telegram) setTgId(s.telegram);
+    }
+  }).catch(() => {});
+}, []);
 
   const [name, setName]         = useState(user?.name || '');
   const [password, setPassword] = useState('');
@@ -226,7 +250,7 @@ function ProfileScreen({ user, showToast }) {
   return (
     <div style={{ background:'#021a14', minHeight:'100vh', paddingBottom:80 }}>
       <div style={{ background:'linear-gradient(135deg, #021a14, #063d35)', padding:'24px 20px', textAlign:'center', borderBottom:'1px solid rgba(0,255,213,0.1)' }}>
-        <img src="/th.png" alt="avatar" style={{ width:50, height:50, borderRadius:'40%', border:'2px solid rgba(255,215,0,0.5)', flexShrink:0, objectFit:'cover' }} />
+        <img src="/yono.png" alt="avatar" style={{ width:50, height:50, borderRadius:'40%', border:'2px solid rgba(255,215,0,0.5)', flexShrink:0, objectFit:'cover' }} />
         <div style={{ color:'#fff', fontWeight:800, fontSize:18 }}>{user?.name || 'User'}</div>
         <div style={{ color:'rgba(255,255,255,0.5)', fontSize:12, marginTop:2 }}>📱 {user?.mobile || '—'}</div>
       </div>
@@ -458,9 +482,18 @@ const [videoEnded, setVideoEnded]   = useState(false);
   useEffect(() => { if (user) fetchWallet(); }, [user, fetchWallet]);
 
   useEffect(() => {
-    apiCall('/api/admin/settings')
-      .then(res => { if (res?.success && res?.settings?.site_name) setSiteName(res.settings.site_name); })
-      .catch(() => {});
+   apiCall('/api/payment-info')
+  .then(res => {
+    if (res?.success && res?.data?.site_name) {
+      setSiteName(res.data.site_name);
+    } else {
+      return apiCall('/api/admin/settings');
+    }
+  })
+  .then(res => {
+    if (res?.success && res?.settings?.site_name) setSiteName(res.settings.site_name);
+  })
+  .catch(() => {});
   }, [user]);
 
   useEffect(() => {
