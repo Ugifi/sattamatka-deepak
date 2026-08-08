@@ -125,7 +125,7 @@ function BlueDrawer({ user, onClose, onNav, onLogout, wallet }) {
 
         <div style={{ background:'linear-gradient(135deg, #021a14, #063d35)', padding:'20px 16px 16px', display:'flex', justifyContent:'space-between', alignItems:'flex-start', borderBottom:'1px solid rgba(0,255,213,0.1)' }}>
           <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-            <img src="/th.png" alt="avatar" style={{ width:50, height:50, borderRadius:'50%', border:'2px solid rgba(255,215,0,0.5)', flexShrink:0, objectFit:'cover' }} />
+            <img src="/yono.png" alt="avatar" style={{ width:50, height:50, borderRadius:'50%', border:'2px solid rgba(255,215,0,0.5)', flexShrink:0, objectFit:'cover' }} />
             <div>
               <div style={{ fontSize:16, fontWeight:800, color:'#fff', marginBottom:2 }}>{user?.name || 'Player'}</div>
               <div style={{ fontSize:12, color:'rgba(255,255,255,0.5)' }}>{user?.mobile || ''}</div>
@@ -617,7 +617,7 @@ if (!videoEnded) {
   return (
     <div style={{ position:'fixed', inset:0, background:'#021a14', overflow:'hidden' }}>
       <video
-        src="/vi.mp4"
+        src="/video.mp4"
         autoPlay
         muted
         playsInline
