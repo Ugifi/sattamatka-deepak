@@ -33,11 +33,33 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     touchEndX.current = e.touches[0].clientX;
   };
 
- const handleTouchEnd = () => {
+ const touchStartY = useRef(0);
+const touchEndY = useRef(0);
+
+const handleTouchStart = (e) => {
+  touchStartX.current = e.touches[0].clientX;
+  touchStartY.current = e.touches[0].clientY;
+  touchEndX.current = 0;
+  touchEndY.current = 0;
+};
+
+const handleTouchMove = (e) => {
+  touchEndX.current = e.touches[0].clientX;
+  touchEndY.current = e.touches[0].clientY;
+};
+
+const handleTouchEnd = () => {
   if (!touchStartX.current || !touchEndX.current) return;
-  const distance = touchStartX.current - touchEndX.current;
-  const isLeftSwipe = distance > 50;
-  const isRightSwipe = distance < -50;
+  const distX = touchStartX.current - touchEndX.current;
+  const distY = Math.abs(touchStartY.current - touchEndY.current);
+  // Agar vertical scroll zyada hai toh swipe ignore karo
+  if (distY > Math.abs(distX)) {
+    touchStartX.current = 0;
+    touchEndX.current = 0;
+    return;
+  }
+  const isLeftSwipe = distX > 50;
+  const isRightSwipe = distX < -50;
   if (isLeftSwipe) setActiveView(prev => (prev + 1) % 3);
   else if (isRightSwipe) setActiveView(prev => (prev - 1 + 3) % 3);
   touchStartX.current = 0;
