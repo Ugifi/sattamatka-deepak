@@ -680,7 +680,9 @@ if (!videoEnded) {
   return (
     <>
       <style>{`
-        .topnav { background: linear-gradient(135deg, #021a14, #063d35) !important; border-bottom: 1px solid rgba(0,255,213,0.1) !important; box-shadow: 0 2px 12px rgba(0,255,213,0.08) !important; }
+        .topnav { background: linear-gradient(135deg, #021a14, #063d35) !important; border-bottom: 1px solid rgba(0,255,213,0.1) !important; box-shadow: 0 2px 12px rgba(0,255,213,0.08) !important; display: flex !important; align-items: center !important; justify-content: space-between !important; padding: 8px 12px !important; height: 56px !important; position: sticky !important; top: 0 !important; z-index: 100 !important; width: 100% !important; box-sizing: border-box !important; }
+.tn-left { display: flex !important; align-items: center !important; gap: 8px !important; flex: 1 !important; }
+.tn-right { display: flex !important; align-items: center !important; gap: 60px !important; flex-shrink: 0 !important; }
         .brand { color: #f4f13e !important; text-shadow: 0 1px 6px rgba(0,255,213,0.15) !important; font-family: 'Baloo 2','Nunito',sans-serif !important; letter-spacing: 2px !important; }
         .back-btn { color: #fff !important; }
         .hamburger span { background: #00ffd5 !important; }
@@ -704,12 +706,21 @@ if (!videoEnded) {
       {/* TOP NAV */}
       <div className="topnav">
         <div className="tn-left">
-          {isSubPage
-            ? <div className="back-btn" onClick={goBack} style={{ color:'#ffffff', fontSize:26, cursor:'pointer', padding:'4px 8px 4px 0' }}>‹</div>
-            : <div className="hamburger" onClick={() => setDrawer(true)}><span/><span/><span/></div>
-          }
-          <span className="brand">{isSubPage ? (navTitle || 'BACK') : siteName}</span>
-        </div>
+  {isSubPage ? (
+    <>
+      <div className="back-btn" onClick={goBack} style={{ color:'#ffffff', fontSize:26, cursor:'pointer', padding:'4px 8px 4px 0' }}>‹</div>
+      <span className="brand">{navTitle || 'BACK'}</span>
+    </>
+  ) : (
+    <img
+      src="/yono.png"
+      alt={siteName}
+      onClick={() => setDrawer(true)}
+      style={{ height: 46, width: 'auto', objectFit: 'contain', cursor: 'pointer' }}
+      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+    />
+  )}
+</div>
         <div className="tn-right">
           {!isTxnTab && (
             <div className="tn-wallet" onClick={() => { fetchWallet(); setPage('wallet'); setTab('wallet'); }}>
