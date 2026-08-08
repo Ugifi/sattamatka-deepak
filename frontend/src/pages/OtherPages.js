@@ -1149,11 +1149,29 @@
     const [errorMsg, setErrorMsg]     = useState('');
 
     useEffect(() => {
-      if (!apiCall) return;
-      apiCall('/api/admin/settings').then(d => {
-        if (d?.success && d?.settings) setContacts({ phone: d.settings.phone || '9999999999', telegram: d.settings.telegram || 'matkaking_support' });
-      }).catch(() => {});
-    }, [apiCall]);
+  if (!apiCall) return;
+  apiCall('/api/payment-info').then(d => {
+    if (d?.success && d?.data) {
+      const wa = d.data.whatsapp_support || d.data.phone || '';
+      const tg = d.data.telegram || '';
+      if (wa || tg) {
+        setContacts({
+          phone: wa || '9999999999',
+          telegram: tg || 'matkaking_support'
+        });
+        return;
+      }
+    }
+    return apiCall('/api/admin/settings');
+  }).then(d => {
+    if (d?.success && d?.settings) {
+      setContacts({
+        phone: d.settings.whatsapp_support || d.settings.phone || '9999999999',
+        telegram: d.settings.telegram || 'matkaking_support'
+      });
+    }
+  }).catch(() => {});
+}, [apiCall]);
 
     const updateProfile = async () => {
       setSuccessMsg(''); setErrorMsg('');
@@ -1195,9 +1213,7 @@
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 50, justifyContent: 'center' }}>
             <div style={{ position: 'relative', flexShrink: 0 }}>
-              <div style={{ width: 90, height: 90, background: 'linear-gradient(135deg, rgba(0,255,213,0.15), rgba(0,255,213,0.05))', border: '2.5px solid rgba(0,255,213,0.4)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 38, fontWeight: 900, color: '#00ffd5', animation: 'avatarGlow 2.5s ease-in-out infinite', fontFamily: "'Teko', sans-serif" }}>
-                {(user?.name || 'U').charAt(0).toUpperCase()}
-              </div>
+            <img src="/th.png" alt="avatar" style={{ width:90, height:90, borderRadius:'0%', border:'2.5px solid rgba(255,215,0,0.5)', objectFit:'cover', animation:'avatarGlow 2.5s ease-in-out infinite', boxShadow:'0 0 18px rgba(255,215,0,0.25)' }} />
               <div style={{ position: 'absolute', bottom: 4, right: 4, width: 14, height: 14, background: '#00cc44', borderRadius: '50%', border: '2px solid #021a14', animation: 'dotBlink 1.5s ease-in-out infinite' }} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
