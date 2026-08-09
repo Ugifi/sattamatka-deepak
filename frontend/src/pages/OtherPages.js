@@ -1263,10 +1263,7 @@
           </div>
         )}
 
-        <div style={B.card}>
-          {successMsg && <div style={{ background: 'rgba(0,204,68,0.1)', border: '1px solid rgba(0,204,68,0.3)', borderRadius: 10, padding: '12px', marginBottom: 16, color: '#00cc44', fontSize: 13, fontWeight: 700 }}>{successMsg}</div>}
-          {errorMsg   && <div style={{ background: 'rgba(255,34,68,0.1)', border: '1px solid rgba(255,34,68,0.3)', borderRadius: 10, padding: '12px', marginBottom: 16, color: '#ff2244', fontSize: 13, fontWeight: 700 }}>{errorMsg}</div>}
-        </div>
+       
 
         {/* PROMO CODE */}
         <div style={{ margin: '0 12px 12px', background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', borderRadius: 16, border: '1px solid rgba(255,215,0,0.2)', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.4)' }}>
