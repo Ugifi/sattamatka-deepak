@@ -50,6 +50,117 @@ app.use('/api/wallet',  walletRoutes);
 app.use('/api/admin',   adminRoutes);
 app.use('/api/scraper', scraperRoutes);
 
+// ── PROMO CODES ──────────────────────────────────────────────────────────────
+
+// Admin: Create promo code
+app.post('/api/admin/promo-codes', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const [users] = await db.query('SELECT role FROM users WHERE id = ?', [decoded.id]);
+    if (!users.length || users[0].role !== 'admin') return res.status(403).json({ success: false, message: 'Admin only' });
+
+    const { code, coins, max_uses, expires_at } = req.body;
+    if (!code || !coins || !max_uses || !expires_at) return res.status(400).json({ success: false, message: 'Sab fields zaroori hain' });
+
+    await db.query(
+      'INSERT INTO promo_codes (code, coins, max_uses, expires_at) VALUES (?, ?, ?, ?)',
+      [code.toUpperCase().trim(), coins, max_uses, expires_at]
+    );
+    res.json({ success: true, message: 'Promo code create ho gaya!' });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ success: false, message: 'Yeh code already exist karta hai' });
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin: Get all promo codes
+app.get('/api/admin/promo-codes', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const [users] = await db.query('SELECT role FROM users WHERE id = ?', [decoded.id]);
+    if (!users.length || users[0].role !== 'admin') return res.status(403).json({ success: false, message: 'Admin only' });
+
+    const [rows] = await db.query('SELECT * FROM promo_codes ORDER BY created_at DESC');
+    res.json({ success: true, codes: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin: Delete promo code
+app.delete('/api/admin/promo-codes/:id', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const [users] = await db.query('SELECT role FROM users WHERE id = ?', [decoded.id]);
+    if (!users.length || users[0].role !== 'admin') return res.status(403).json({ success: false, message: 'Admin only' });
+
+    await db.query('DELETE FROM promo_codes WHERE id = ?', [req.params.id]);
+    res.json({ success: true, message: 'Code delete ho gaya' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// User: Redeem promo code
+app.post('/api/wallet/redeem-promo', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ success: false, message: 'Code daalo' });
+
+    const [codes] = await db.query('SELECT * FROM promo_codes WHERE code = ?', [code.toUpperCase().trim()]);
+    if (!codes.length) return res.status(404).json({ success: false, message: 'Invalid promo code' });
+
+    const promo = codes[0];
+
+    // Expire check
+    if (new Date() > new Date(promo.expires_at)) {
+      return res.status(400).json({ success: false, message: 'Promo code expire ho gaya' });
+    }
+
+    // Max uses check
+    if (promo.used_count >= promo.max_uses) {
+      return res.status(400).json({ success: false, message: 'Promo code ki limit khatam ho gayi' });
+    }
+
+    // Already used check
+    const [already] = await db.query(
+      'SELECT id FROM promo_redemptions WHERE user_id = ? AND promo_id = ?',
+      [userId, promo.id]
+    );
+    if (already.length) return res.status(400).json({ success: false, message: 'Aap yeh code pehle use kar chuke hain' });
+
+    // Add coins
+    await db.query('UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?', [promo.coins, userId]);
+    await db.query('UPDATE promo_codes SET used_count = used_count + 1 WHERE id = ?', [promo.id]);
+    await db.query('INSERT INTO promo_redemptions (user_id, promo_id) VALUES (?, ?)', [userId, promo.id]);
+
+    // Transaction log
+    await db.query(
+      'INSERT INTO transactions (user_id, type, amount, description, status) VALUES (?, "credit", ?, ?, "completed")',
+      [userId, promo.coins, `Promo Code: ${promo.code}`]
+    );
+
+    res.json({ success: true, message: `🎉 ${promo.coins} coins add ho gaye!`, coins: promo.coins });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.get('/test-disawar-raw', async (req, res) => {
   const axios = require('axios');
   const cheerio = require('cheerio');
