@@ -496,6 +496,104 @@ function WithdrawCard({ w, onApprove, onReject }) {
 }
 
 // ─── ADMIN LOGIN ──────────────────────────────────────────────
+// ── PROMO PAGE ────────────────────────────────────────────────
+function PromoPage({ showToast }) {
+  const [codes, setCodes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ code: '', coins: '', max_uses: '', expires_at: '' });
+  const [creating, setCreating] = useState(false);
+
+  const fetchCodes = async () => {
+    setLoading(true);
+    const res = await apiCall('/api/admin/promo-codes');
+    if (res.success) setCodes(res.codes || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchCodes(); }, []);
+
+  const createCode = async () => {
+    if (!form.code || !form.coins || !form.max_uses || !form.expires_at) {
+      showToast('❌ Saare fields bhariye!'); return;
+    }
+    setCreating(true);
+    const res = await apiCall('/api/admin/promo-codes', 'POST', {
+      code: form.code.toUpperCase().trim(),
+      coins: Number(form.coins),
+      max_uses: Number(form.max_uses),
+      expires_at: form.expires_at,
+    });
+    setCreating(false);
+    if (res.success) {
+      showToast('✅ Promo code create ho gaya!');
+      setForm({ code: '', coins: '', max_uses: '', expires_at: '' });
+      fetchCodes();
+    } else {
+      showToast('❌ ' + (res.message || 'Error'));
+    }
+  };
+
+  const deleteCode = async (id) => {
+    if (!window.confirm('Yeh promo code delete karna chahte ho?')) return;
+    const res = await apiCall(`/api/admin/promo-codes/${id}`, 'DELETE');
+    if (res.success) { showToast('✅ Code deleted'); fetchCodes(); }
+    else showToast('❌ ' + res.message);
+  };
+
+  return (
+    <div>
+      <div style={B.card}>
+        <div style={B.title}>🎁 New Promo Code</div>
+        <label style={B.label}>Code</label>
+        <input style={B.input} placeholder="e.g. WELCOME100" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))} />
+        <label style={B.label}>Coins (Amount)</label>
+        <input style={B.input} type="number" placeholder="e.g. 100" value={form.coins} onChange={e => setForm(f => ({ ...f, coins: e.target.value }))} />
+        <label style={B.label}>Max Uses (Kitne log use kar sakte hain)</label>
+        <input style={B.input} type="number" placeholder="e.g. 50" value={form.max_uses} onChange={e => setForm(f => ({ ...f, max_uses: e.target.value }))} />
+        <label style={B.label}>Expire Date & Time</label>
+        <input style={B.input} type="datetime-local" value={form.expires_at} onChange={e => setForm(f => ({ ...f, expires_at: e.target.value }))} />
+        <button style={B.btn} onClick={createCode} disabled={creating}>
+          {creating ? '⏳ CREATING...' : '🎁 CREATE PROMO CODE'}
+        </button>
+      </div>
+
+      <div style={B.card}>
+        <div style={B.title}>📋 All Promo Codes</div>
+        {loading ? (
+          <div style={{ textAlign: 'center', color: '#00ffd5', padding: 30, fontWeight: 700 }}>⏳ Loading...</div>
+        ) : codes.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', padding: 30, fontWeight: 700 }}>Koi promo code nahi hai</div>
+        ) : codes.map(c => (
+          <div key={c.id} style={{ background: 'rgba(0,255,213,0.04)', border: '1px solid rgba(0,255,213,0.1)', borderRadius: 12, padding: 14, marginBottom: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+              <div>
+                <div style={{ fontWeight: 900, fontSize: 18, color: '#FFD700', letterSpacing: 2 }}>{c.code}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginTop: 4 }}>
+                  💰 {c.coins} Coins &nbsp;|&nbsp; 👥 {c.used_count}/{c.max_uses} used
+                </div>
+                <div style={{ fontSize: 11, color: new Date(c.expires_at) < new Date() ? '#ff1744' : '#00e676', fontWeight: 700, marginTop: 4 }}>
+                  {new Date(c.expires_at) < new Date() ? '❌ Expired' : '✅ Active'} · Expires: {new Date(c.expires_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                </div>
+              </div>
+              <button onClick={() => deleteCode(c.id)} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(255,23,68,0.3)', cursor: 'pointer', fontWeight: 800, fontSize: 12, background: 'rgba(255,23,68,0.12)', color: '#ff1744' }}>
+                🗑️ Delete
+              </button>
+            </div>
+            <div style={{ background: 'rgba(0,255,213,0.06)', borderRadius: 8, padding: '6px 12px' }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min((c.used_count / c.max_uses) * 100, 100)}%`, background: c.used_count >= c.max_uses ? '#ff1744' : 'linear-gradient(90deg, #14f4ce, #e0800b)', borderRadius: 10, transition: 'width 0.3s' }} />
+                </div>
+                <div style={{ fontSize: 11, color: '#00ffd5', fontWeight: 800, flexShrink: 0 }}>{Math.round((c.used_count / c.max_uses) * 100)}%</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function AdminLogin({ onLogin }) {
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
@@ -820,6 +918,7 @@ const [gameTab, setGameTab] = useState('main');
     { id: 'withdrawals', ic: '💸', l: 'Withdrawals' },
     { id: 'bids', ic: '🎯', l: 'All Bids' },
     { id: 'results', ic: '🏆', l: 'Declare Result' },
+    { id: 'promo', ic: '🎁', l: 'Promo Codes' },
     { id: 'notices', ic: '🔔', l: 'Notices' },
     { id: 'settings', ic: '⚙️', l: 'Settings' },
   ];
@@ -828,7 +927,7 @@ const [gameTab, setGameTab] = useState('main');
     dashboard: '📊 Dashboard', users: '👥 Users', games: '🎮 Manage Games',
     deposits: '💰 Deposit Requests', withdrawals: '💸 Withdrawal Requests',
     bids: '🎯 All Player Bids', results: '🏆 Declare Results',
-    notices: '🔔 Notices & Alerts', settings: '⚙️ Settings',
+    promo: '🎁 Promo Codes', notices: '🔔 Notices & Alerts', settings: '⚙️ Settings',
   };
 
   if (!adminReady) {
@@ -1169,6 +1268,11 @@ const [gameTab, setGameTab] = useState('main');
               ))
             }
           </div>
+        )}
+
+        {/* ── PROMO CODES ── */}
+        {!loading && page === 'promo' && (
+          <PromoPage showToast={showToast} />
         )}
 
         {/* ── NOTICES ── */}
