@@ -1,5 +1,4 @@
   import React, { useState, useEffect, useRef } from 'react';
-  import { Browser } from '@capacitor/browser';
 
   // ── DARK NEON THEME SHARED STYLES ──
   const B = {
@@ -1142,11 +1141,14 @@
 
   // ── SUPPORT & PROFILE PAGE ──
   export function SupportPage({ apiCall, user }) {
-    const [contacts, setContacts] = useState({ phone: '9999999999', telegram: 'matkaking_support' });
-    const [profileForm, setProfileForm] = useState({ username: user?.name || '', oldPassword: '', newPassword: '', confirmPassword: '' });
-    const [loading, setLoading]   = useState(false);
-    const [successMsg, setSuccessMsg] = useState('');
-    const [errorMsg, setErrorMsg]     = useState('');
+  const [contacts, setContacts] = useState({ phone: '9999999999', telegram: 'matkaking_support' });
+  const [profileForm, setProfileForm] = useState({ username: user?.name || '', oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [loading, setLoading]   = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg]     = useState('');
+  const [promoCode, setPromoCode] = useState('');
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoMsg, setPromoMsg] = useState({ type: '', text: '' });
 
     useEffect(() => {
   if (!apiCall) return;
@@ -1264,6 +1266,43 @@
         <div style={B.card}>
           {successMsg && <div style={{ background: 'rgba(0,204,68,0.1)', border: '1px solid rgba(0,204,68,0.3)', borderRadius: 10, padding: '12px', marginBottom: 16, color: '#00cc44', fontSize: 13, fontWeight: 700 }}>{successMsg}</div>}
           {errorMsg   && <div style={{ background: 'rgba(255,34,68,0.1)', border: '1px solid rgba(255,34,68,0.3)', borderRadius: 10, padding: '12px', marginBottom: 16, color: '#ff2244', fontSize: 13, fontWeight: 700 }}>{errorMsg}</div>}
+        </div>
+
+        {/* PROMO CODE */}
+        <div style={{ margin: '0 12px 12px', background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', borderRadius: 16, border: '1px solid rgba(255,215,0,0.2)', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.4)' }}>
+          <div style={{ padding: '14px 16px', background: 'rgba(255,215,0,0.05)', borderBottom: '1px solid rgba(255,215,0,0.15)', fontSize: 12, fontWeight: 800, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1.5, fontFamily: "'Teko', sans-serif" }}>🎁 Promo Code Redeem Karo</div>
+          <div style={{ padding: '16px' }}>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <input
+                type="text"
+                placeholder="Promo code daalo..."
+                value={promoCode}
+                onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoMsg({ type: '', text: '' }); }}
+                style={{ flex: 1, background: 'rgba(255,215,0,0.06)', border: '1.5px solid rgba(255,215,0,0.25)', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 14, fontWeight: 700, outline: 'none', fontFamily: 'inherit', letterSpacing: 2 }}
+              />
+              <button
+                onClick={async () => {
+                  if (!promoCode.trim()) return setPromoMsg({ type: 'err', text: 'Code daalo pehle' });
+                  setPromoLoading(true); setPromoMsg({ type: '', text: '' });
+                  try {
+                    const res = await apiCall('/api/wallet/redeem-promo', 'POST', { code: promoCode.trim() });
+                    if (res.success) { setPromoMsg({ type: 'ok', text: res.message }); setPromoCode(''); }
+                    else { setPromoMsg({ type: 'err', text: res.message || 'Invalid code' }); }
+                  } catch { setPromoMsg({ type: 'err', text: 'Network error' }); }
+                  setPromoLoading(false);
+                }}
+                disabled={promoLoading}
+                style={{ padding: '12px 18px', background: promoLoading ? 'rgba(255,255,255,0.1)' : 'linear-gradient(90deg, #FFD700, #e0800b)', border: 'none', borderRadius: 10, color: '#001a17', fontWeight: 900, fontSize: 13, cursor: promoLoading ? 'not-allowed' : 'pointer' }}
+              >
+                {promoLoading ? '⏳' : '✅ Apply'}
+              </button>
+            </div>
+            {promoMsg.text && (
+              <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 10, background: promoMsg.type === 'ok' ? 'rgba(0,204,68,0.1)' : 'rgba(255,34,68,0.1)', border: `1px solid ${promoMsg.type === 'ok' ? 'rgba(0,204,68,0.3)' : 'rgba(255,34,68,0.3)'}`, color: promoMsg.type === 'ok' ? '#00cc44' : '#ff2244', fontSize: 13, fontWeight: 700 }}>
+                {promoMsg.text}
+              </div>
+            )}
+          </div>
         </div>
 
         <div style={{ margin: '0 12px', background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))', borderRadius: 16, border: '1px solid rgba(0,255,213,0.15)', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.4)' }}>
