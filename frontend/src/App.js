@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import './App.css';
+import '../App.css';
 import ChartPage from './pages/ChartPage';
 import AuthScreen from './components/AuthScreen';
 import Toast from './components/Toast';
@@ -484,14 +484,29 @@ const [videoEnded, setVideoEnded]   = useState(false);
   useEffect(() => {
    apiCall('/api/payment-info')
   .then(res => {
-    if (res?.success && res?.data?.site_name) {
-      setSiteName(res.data.site_name);
-    } else {
-      return apiCall('/api/admin/settings');
+    if (res?.success && res?.data) {
+      const d = res.data;
+      if (d.site_name) setSiteName(d.site_name);
+      if (d.whatsapp_support || d.phone) {
+        const num = (d.whatsapp_support || d.phone).replace(/\D/g, '');
+        window._mkWaNumber = num.startsWith('91') ? num : `91${num}`;
+      }
+      if (d.telegram) window._mkTgId = d.telegram;
+      if (d.site_name) return null;
     }
+    return apiCall('/api/admin/settings');
   })
   .then(res => {
-    if (res?.success && res?.settings?.site_name) setSiteName(res.settings.site_name);
+    if (!res) return;
+    if (res?.success && res?.settings) {
+      const s = res.settings;
+      if (s.site_name) setSiteName(s.site_name);
+      if (s.whatsapp_support || s.phone) {
+        const num = (s.whatsapp_support || s.phone).replace(/\D/g, '');
+        window._mkWaNumber = num.startsWith('91') ? num : `91${num}`;
+      }
+      if (s.telegram) window._mkTgId = s.telegram;
+    }
   })
   .catch(() => {});
   }, [user]);
@@ -769,6 +784,47 @@ if (!videoEnded) {
       {page === 'privacy'    && <PrivacyPage onBack={() => setPage('home')} />}
       {page === 'gamerates'  && <GameRatesPage onBack={() => setPage('home')} />}
       {page === 'referral'   && <ReferralPage apiCall={apiCall} user={user} onBack={() => setPage('wallet')} />}
+
+      {/* FLOATING SUPPORT BUTTONS */}
+      {!isSubPage && (
+        <div style={{ position: 'fixed', right: 14, bottom: 90, zIndex: 999, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <style>{`
+            @keyframes floatBtn { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-5px);} }
+            @keyframes pulseRing { 0%{box-shadow:0 0 0 0 rgba(0,230,118,0.5);} 70%{box-shadow:0 0 0 10px rgba(0,230,118,0);} 100%{box-shadow:0 0 0 0 rgba(0,230,118,0);} }
+            @keyframes pulseRingTG { 0%{box-shadow:0 0 0 0 rgba(0,136,204,0.5);} 70%{box-shadow:0 0 0 10px rgba(0,136,204,0);} 100%{box-shadow:0 0 0 0 rgba(0,136,204,0);} }
+            .float-wa { animation: floatBtn 3s ease-in-out infinite, pulseRing 2s ease-in-out infinite; }
+            .float-tg { animation: floatBtn 3s ease-in-out infinite 0.5s, pulseRingTG 2s ease-in-out infinite 0.5s; }
+            .float-wa:hover,.float-tg:hover { transform: scale(1.15) !important; animation: none !important; }
+          `}</style>
+
+          {/* WhatsApp */}
+          <div className="float-wa"
+            onClick={() => {
+              const num = (window._mkWaNumber || '919999999999');
+              window.open(`https://wa.me/${num}`, '_blank');
+            }}
+            style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #25D366, #128C7E)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)' }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.522 5.847L.057 23.882l6.19-1.624A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.368l-.359-.213-3.724.977.995-3.63-.234-.374A9.818 9.818 0 012.182 12C2.182 6.58 6.58 2.182 12 2.182S21.818 6.58 21.818 12 17.42 21.818 12 21.818z"/>
+            </svg>
+          </div>
+
+          {/* Telegram */}
+          <div className="float-tg"
+            onClick={() => {
+              const tg = (window._mkTgId || 'matkaking_support');
+              window.open(`https://t.me/${tg}`, '_blank');
+            }}
+            style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #2AABEE, #1A7CBD)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)' }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
+              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.04 13.988l-2.963-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.111.571z"/>
+            </svg>
+          </div>
+        </div>
+      )}
+
+  
 
       {/* BOTTOM NAV */}
       {!isSubPage && (
