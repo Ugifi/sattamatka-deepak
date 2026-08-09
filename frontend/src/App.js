@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import '../App.css';
+import './App.css';
 import ChartPage from './pages/ChartPage';
 import AuthScreen from './components/AuthScreen';
 import Toast from './components/Toast';
