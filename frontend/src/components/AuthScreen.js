@@ -780,7 +780,7 @@ export default function AuthScreen({ onLogin }) {
 
         .field-label {
           display: block;
-          margin: 0 0 5px 1px;
+          margin: 10px  5px 10px;
           color: rgba(244, 241, 51, 0.99);
           font-size: 10px;
           font-weight: 900;
@@ -864,6 +864,7 @@ export default function AuthScreen({ onLogin }) {
           overflow: hidden;
           width: 100%;
           min-height: 58px;
+          margin-top: 20px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -1278,15 +1279,13 @@ export default function AuthScreen({ onLogin }) {
                     gap: 6,
                     padding: '11px 0',
                     borderRadius: 12,
-                    background: 'rgba(37,211,102,0.12)',
-                    border: '1.5px solid rgba(37,211,102,0.35)',
-                    color: '#25D366',
+                   
                     fontWeight: 800,
                     fontSize: 13,
                     textDecoration: 'none',
                   }}
                 >
-                  WhatsApp Support System
+                  
                 </a>
               )}
               {tgUsername && (
