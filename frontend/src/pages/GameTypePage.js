@@ -39,10 +39,49 @@ export default function GameTypePage({ game, onSelect }) {
     <div className="game-type-page screen" style={{
       background: 'linear-gradient(145deg, rgba(2,26,20,0.9), rgba(6,61,53,0.8))',
       minHeight: '100vh',
-      paddingTop: '20px',
+      paddingTop: '0px',
       paddingBottom: '80px',
       overscrollBehavior: 'none',
     }}>
+
+      {/* ✅ HEADER - Game Name + Logo */}
+      {game && (
+        <div style={{
+          background: 'linear-gradient(135deg, #053c3a, #053c3a)',
+          padding: '14px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          marginBottom: 8
+        }}>
+          <div style={{
+            width: 38, height: 38,
+            borderRadius: 10,
+            background: 'rgba(255,215,0,0.15)',
+            border: '1.5px solid rgba(255,215,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 20
+          }}>
+            {game.game_category === 'starline' ? '⭐' :
+             game.game_category === 'disawar'  ? '🎯' : '🎰'}
+          </div>
+          <div>
+            <div style={{
+              fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: 1
+            }}>
+              {game.name}
+            </div>
+            <div style={{
+              fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 600
+            }}>
+              Game Type Select Karo
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Game Name Banner */}
       {game && (
