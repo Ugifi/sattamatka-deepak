@@ -724,7 +724,15 @@ if (!videoEnded) {
             : <div className="hamburger" onClick={() => setDrawer(true)}><span/><span/><span/></div>
           }
           {isSubPage 
-  ? <span className="brand">{navTitle || 'BACK'}</span>
+  ? <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <img 
+        src="/yono.png" 
+        alt={siteName}
+        style={{ height: 36, width: 'auto', objectFit: 'contain' }}
+        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+      />
+      <span className="brand">{navTitle || 'BACK'}</span>
+    </div>
   : <img 
       src="/yono.png" 
       alt={siteName}
